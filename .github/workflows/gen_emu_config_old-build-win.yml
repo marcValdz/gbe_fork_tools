@@ -42,13 +42,13 @@ jobs:
       - name: "Install env"
         shell: "pwsh"
         working-directory: "${{ env.SCRIPT_BASE_DIR }}"
-        run: recreate_venv_win.ps1
+        run: .\recreate_venv_win.ps1
 
       # build
       - name: "Rebuild"
         shell: "pwsh"
         working-directory: "${{ env.SCRIPT_BASE_DIR }}"
-        run: rebuild_win.ps1
+        run: .\rebuild_win.ps1
 
       # upload artifact
       - name: "Upload build package"
