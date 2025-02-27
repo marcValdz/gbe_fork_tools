@@ -138,6 +138,14 @@ def generate_all_ach_watcher_schemas(
         },
         "apiVersion": 1,
     }
+    ach_watcher_gameIndex_schema = {
+        "appid": appid,
+        "name": app_name,
+        "binary": app_exe,
+        "icon": small_icon_hash,
+    }
+    # print(ach_watcher_gameIndex_schema)
+    
     
     langs : set[str] = set()
     for ach in achs:
@@ -171,3 +179,9 @@ def generate_all_ach_watcher_schemas(
         out_schema_file = os.path.join(out_schema_folder, f'{appid}.db')
         with open(out_schema_file, "wt", encoding='utf-8') as f:
             json.dump(out_schema, f, ensure_ascii=False, indent=2)
+
+    gameIndex = []
+    gameIndex.append(ach_watcher_gameIndex_schema)
+    out_gameIndex_file = os.path.join(ach_watcher_out_dir, 'gameIndex.json')
+    with open(out_gameIndex_file, "wt", encoding='utf-8') as f:
+        json.dump(gameIndex, f, ensure_ascii=False, indent=2)
