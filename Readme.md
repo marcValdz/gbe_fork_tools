@@ -9,4 +9,4 @@ This fork tries to add a couple new features:
 - The codex steam_emu.ini generation now automatically fills `AccountId` and `UserName` with the correct values when logged-in. `AccountId` is set to **random** and `UserName` is set to **Player** when ran with the _-anon_ argument.
 - The `top_owner_ids.txt` file is now programatically filled with the latest scraped data from [SteamLadder](https://steamladder.com/ladder/games/). The first run will create the file, and any subsequent runs will utilize it until the user decides to delete it if they wish to rescrape again.
 
-NOTE: This was made with the assistance of ChatGPT's reasoning model. I haven't extensively tested every single aspect of the script after refactoring, but the major features seem to be working fine.
+NOTE: This was made with the assistance of ChatGPT's reasoning model. I haven't extensively tested every single aspect of the script after refactoring, but the major features seem to be working fine. Also, I haven't updated the Linux scripts yet (mainly since AW is Windows only).
