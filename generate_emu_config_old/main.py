@@ -20,7 +20,7 @@ from inventory import generate_inventory
 from depots import get_depots_infos
 from external_components import app_details, app_images, safe_name
 from controller_config_generator import parse_controller_vdf
-from external_components import ach_watcher_gen, cdx_gen
+from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
 
 def main():
     # Initialize flags and login variables
@@ -371,6 +371,10 @@ def main():
                 username,
                 dlc_config_list,
                 achievements)
+            cold_client_gen.generate_cold_client_ini(
+                base_out_dir,
+                appid,
+                app_exe)
         
         if DOWNLOAD_COMMON_IMAGES:
             app_images.download_app_images(
