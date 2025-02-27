@@ -387,15 +387,15 @@ def generate_achievement_stats(client, game_id : int, output_directory, backup_d
     stats_schema_found = None
     print(f"finding achievements stats...")
     for id in TOP_OWNER_IDS:
-        #print(f"finding achievements stats using account ID {id}...")
+        print(f"finding achievements stats using account ID {id}...")
         out = get_stats_schema(client, game_id, id)
         if out is not None and len(out.body.schema) > 0:
             stats_schema_found = out
-            #print(f"found achievement stats using account ID {id}")
+            print(f"found achievement stats using account ID {id}!")
             break
 
     if stats_schema_found is None: # nothing found
-        print(f"[X] app id {game_id} has not achievements")
+        print(f"[X] app id {game_id} has no achievements")
         return []
 
     achievement_images_dir = os.path.join(output_directory, "img")
