@@ -8,7 +8,7 @@ This fork introduces several enhancements to improve the functionality, maintain
 
 ### Code Refactoring & Maintainability
 
-- `generate_emu_`[`config.py`](http://config.py "Linkify Plus Plus") has been refactored into separate files to enhance readability and maintainability.
+- `generate_emu_config.py` has been refactored into separate files to enhance readability and maintainability.
 - Windows build scripts now utilize PowerShell instead of batch scripts.
 - The rebuild script now generates full `.exe` files rather than using an `_internal` folder for dependencies.
 
