@@ -25,6 +25,7 @@
 /generate_emu_config_old/output/
 /generate_emu_config_old/**/my_login.txt
 /generate_emu_config_old/top_owners_ids.txt
+/generate_emu_config_old/refresh_tokens.json
 
 # migrate_gse
 /migrate_gse/.py*/
