@@ -1047,9 +1047,14 @@ def main():
                 icon)
         
         if GENERATE_CODEX_INI:
+            user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
+            username = client.user.name or "Player"
+            
             cdx_gen.generate_cdx_ini(
                 base_out_dir,
                 appid,
+                user_id3,
+                username,
                 dlc_config_list,
                 achievements)
 

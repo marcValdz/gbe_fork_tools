@@ -14,22 +14,22 @@ __cdx_ini = '''
 ###          пппллВмммммлВлллВпп    
 ###
 ###
-### Game data is stored at %SystemDrive%\\Users\\Public\\Documents\\Steam\\CODEX\\{cdx_id}
+### Game data is stored at %SystemDrive%\\Users\\Public\\Documents\\Steam\\CODEX\\{cdx_app_id}
 ###
 
 [Settings]
 ###
-### Game identifier (http://store.steampowered.com/app/{cdx_id})
+### Game identifier (http://store.steampowered.com/app/{cdx_app_id})
 ###
-AppId={cdx_id}
+AppId={cdx_app_id}
 ###
 ### Steam Account ID, set it to 0 to get a random Account ID
 ###
-#AccountId=0
+AccountId={cdx_id3}
 ### 
 ### Name of the current player
 ###
-UserName=Player2
+UserName={cdx_name}
 ###
 ### Language that will be used in the game
 ###
@@ -116,8 +116,10 @@ DLCUnlockall=0
 
 
 def generate_cdx_ini(
-    base_out_dir : str,
+    base_out_dir: str,
     appid: int,
+    user_id3 : str,
+    username : str,
     dlc: list[tuple[int, str]],
     achs: list[dict]) -> None:
 
@@ -147,7 +149,9 @@ def generate_cdx_ini(
         achs_list.append(f'{ach["name"]} Unachieved={icon_gray}') # locked
 
     formatted_ini = __cdx_ini.format(
-        cdx_id = appid,
+        cdx_app_id = appid,
+        cdx_id3 = user_id3,
+        cdx_name = username,
         cdx_dlc_list = "\n".join(dlc_list),
         cdx_ach_list = "\n".join(achs_list)
     )
