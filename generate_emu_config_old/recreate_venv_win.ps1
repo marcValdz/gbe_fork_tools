@@ -30,6 +30,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Deactivate virtual environment
-& "$VENV\Scripts\Deactivate.ps1"
+deactivate
 
 Write-Output "Virtual environment setup completed successfully."
