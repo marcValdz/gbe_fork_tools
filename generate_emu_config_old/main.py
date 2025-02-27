@@ -202,7 +202,7 @@ def main():
                 if sanitized_name:
                     app_name_on_disk = f'{sanitized_name}-{appid}'
         else:
-            app_name = f"Unknown_Steam_app_{appid}"
+            app_name = f"Unknown_Steam_app_{appid}" # we need this for later use in the Achievement Watcher
             print("[X] Couldn't find app name on store")
 
         root_backup_dir = os.path.join(get_exe_dir(RELATIVE_DIR), "backup")
@@ -273,6 +273,8 @@ def main():
                     dlc_name = f"Unknown Steam app {dlc}"
                 dlc_config_list.append((dlc, dlc_name))
 
+        # we set unlock_all=0 nonetheless, to make the emu lock DLCs, otherwise everything is allowed
+        # some games use that as a detection mechanism
         merge_dict(out_config_app_ini, {
             'configs.app.ini': {
                 'app::dlcs': {
@@ -288,6 +290,7 @@ def main():
                     }
                 }
             })
+        # write the data as soon as possible in case a later step caused an exception
         write_ini_file(emu_settings_dir, out_config_app_ini)
 
         if all_depots:
