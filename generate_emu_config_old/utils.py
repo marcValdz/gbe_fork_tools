@@ -45,14 +45,13 @@ Switches:
  -imgs:     download common images (background, icon, logo, etc.)
  -name:     save output in a folder named after the app (unsafe characters are removed)
  -cdx:      generate .ini file for CODEX Steam emu for each app
- -aw:       generate Achievement Watcher schemas for all languages
  -clean:    clean output folder before generating data
  -anon:     login as an anonymous account (limited access)
  -token:    save refresh_token to disk after login
  -de:       disable some extra features (by generating corresponding config files)
  -cve:      enable convenient extra features (by generating corresponding config files)
  -reldir:   use relative directories for temp/input files
- -skip_ach: skip achievements processing
+ -skip_ach: skip achievements processing and Achievement Watcher schema generation
  -skip_con: skip controller configuration generation
  -skip_inv: skip inventory data generation
 """
