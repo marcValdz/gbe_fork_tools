@@ -34,25 +34,34 @@ def print_help():
     exe_name = os.path.basename(sys.argv[0])
     help_text = f"""
 Usage: {exe_name} [Switches] appid appid appid ...
- Example: {exe_name} 421050 420 480
- Example: {exe_name} -shots -thumbs -vid -imgs -name -cdx -aw -clean -de 421050 480
- Example: {exe_name} -shots -thumbs -vid -imgs -name -cdx -aw -clean -de -cve 421050
+    Example: {exe_name} 421050 420 480
+    Example: {exe_name} -shots -thumbs -vid -imgs -name -cdx -aw -clean -de 421050 480
+    Example: {exe_name} -shots -thumbs -vid -imgs -name -cdx -aw -clean -de -cve 421050
 
 Switches:
- -shots:    download screenshots for each app if available
- -thumbs:   download screenshot thumbnails if available
- -vid:      download the first available video (trailer, gameplay, etc.)
- -imgs:     download common images (background, icon, logo, etc.)
- -name:     save output in a folder named after the app (unsafe characters are removed)
- -cdx:      generate .ini file for CODEX Steam emu for each app
- -clean:    clean output folder before generating data
- -anon:     login as an anonymous account (limited access)
- -token:    save refresh_token to disk after login
- -de:       disable some extra features (by generating corresponding config files)
- -cve:      enable convenient extra features (by generating corresponding config files)
- -reldir:   use relative directories for temp/input files
- -skip_ach: skip achievements processing and Achievement Watcher schema generation
- -skip_con: skip controller configuration generation
- -skip_inv: skip inventory data generation
+    -shots:    download screenshots for each app if available
+    -thumbs:   download screenshot thumbnails if available
+    -vid:      download the first available video (trailer, gameplay, etc.)
+    -imgs:     download common images (background, icon, logo, etc.)
+    -name:     save output in a folder named after the app (unsafe characters are removed)
+    -cdx:      generate .ini file for CODEX Steam emu for each app
+    -clean:    clean output folder before generating data
+    -anon:     login as an anonymous account (limited access)
+    -token:    save refresh_token to disk after login
+    -de:       disable some extra features (by generating corresponding config files)
+    -cve:      enable convenient extra features (by generating corresponding config files)
+    -reldir:   use relative directories for temp/input files
+    -skip_ach: skip achievements processing and Achievement Watcher schema generation
+    -skip_con: skip controller configuration generation
+    -skip_inv: skip inventory data generation
+    
+All switches are optional except app id, at least 1 app id must be provided
+
+Automate the login prompt:
+* You can create a file called 'my_login.txt' beside the script, then add your username on the first line and your password on the second line.
+* You can set these 2 environment variables (will override 'my_login.txt'):
+    GSE_CFG_USERNAME
+    GSE_CFG_PASSWORD
 """
     print(help_text)
+
