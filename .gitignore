@@ -30,3 +30,4 @@
 /tools/migrate_gse/.py*/
 /tools/migrate_gse/.env*/
 /tools/migrate_gse/bin
+/generate_emu_config_old/bin
