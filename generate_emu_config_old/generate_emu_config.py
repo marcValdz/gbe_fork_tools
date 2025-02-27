@@ -991,25 +991,14 @@ def main():
                 with open(os.path.join(info_out_dir, "launch_config.json"), "wt", encoding='utf-8') as f:
                     json.dump(launch_configs, f, ensure_ascii=False, indent=2)
                 
-                first_app_exe : str = None
-                prefered_app_exe : str = None
-                unwanted_app_exes = ["launch", "start", "play", "try", "demo", "_vr",]
                 for cfg in launch_configs.values():
-                    if "executable" in cfg:
-                        app_exe = f'{cfg["executable"]}'
+                    if "config" in cfg and "betakey" in cfg["config"]:
+                        continue
                     
+                    app_exe = cfg["executable"]
                     if app_exe.lower().endswith(".exe"):
                         app_exe = app_exe.replace("\\", "/").split('/')[-1]
-                        if first_app_exe is None:
-                            first_app_exe = app_exe
-                        if all(app_exe.lower().find(unwanted_exe) < 0 for unwanted_exe in unwanted_app_exes):
-                            prefered_app_exe = app_exe
-                            break
-                
-                if prefered_app_exe:
-                    app_exe = prefered_app_exe
-                elif first_app_exe:
-                    app_exe = first_app_exe
+                        break
 
         if GENERATE_ACHIEVEMENT_WATCHER_SCHEMAS:
             ach_watcher_gen.generate_all_ach_watcher_schemas(
