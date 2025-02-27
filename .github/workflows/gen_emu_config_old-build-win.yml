@@ -40,15 +40,15 @@ jobs:
 
       # env
       - name: "Install env"
-        shell: "cmd"
+        shell: "pwsh"
         working-directory: "${{ env.SCRIPT_BASE_DIR }}"
-        run: recreate_venv_win.bat
+        run: recreate_venv_win.ps1
 
       # build
       - name: "Rebuild"
-        shell: "cmd"
+        shell: "pwsh"
         working-directory: "${{ env.SCRIPT_BASE_DIR }}"
-        run: rebuild_win.bat
+        run: rebuild_win.ps1
 
       # upload artifact
       - name: "Upload build package"
