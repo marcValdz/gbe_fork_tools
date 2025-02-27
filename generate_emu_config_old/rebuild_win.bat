@@ -29,25 +29,32 @@ if exist "%BUILD_TEMP_DIR%" (
 call "%VENV%\Scripts\activate.bat"
 
 echo:building generate_emu_config...
-pyinstaller "generate_emu_config.py" --distpath "%OUT_DIR%" -y --clean --onedir --name "generate_emu_config" --noupx --console -i "%ICON_FILE%" --collect-submodules "steam" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
+pyinstaller "generate_emu_config.py" --distpath "%OUT_DIR%" -y --clean --onefile --name "generate_emu_config" --noupx --console -i "%ICON_FILE%" --collect-submodules "steam" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
   set /a "LAST_ERR_CODE=1"
   goto :end_script
 )
-::call "%SIGNER_TOOL%" "%OUT_DIR%\generate_emu_config\generate_emu_config.exe"
+::call "%SIGNER_TOOL%" "%OUT_DIR%\generate_emu_config.exe"
+
+echo:building update_achievement_watcher...
+pyinstaller "update_achievement_watcher.py" --distpath "%OUT_DIR%" -y --clean --onefile --name "update_achievement_watcher" --noupx --console -i "%ICON_FILE%" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
+  set /a "LAST_ERR_CODE=1"
+  goto :end_script
+)
+::call "%SIGNER_TOOL%" "%OUT_DIR%\update_achievement_watcher.exe"
 
 echo:building parse_controller_vdf...
-pyinstaller "controller_config_generator\parse_controller_vdf.py" --distpath "%OUT_DIR%" -y --clean --onedir --name "parse_controller_vdf" --noupx --console -i "NONE" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
+pyinstaller "controller_config_generator\parse_controller_vdf.py" --distpath "%OUT_DIR%" -y --clean --onefile --name "parse_controller_vdf" --noupx --console -i "%ICON_FILE%" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
   set /a "LAST_ERR_CODE=1"
   goto :end_script
 )
-::call "%SIGNER_TOOL%" "%OUT_DIR%\parse_controller_vdf\parse_controller_vdf.exe"
+::call "%SIGNER_TOOL%" "%OUT_DIR%\parse_controller_vdf.exe"
 
 echo:building parse_achievements_schema...
-pyinstaller "stats_schema_achievement_gen\achievements_gen.py" --distpath "%OUT_DIR%" -y --clean --onedir --name "parse_achievements_schema" --noupx --console -i "NONE" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
+pyinstaller "stats_schema_achievement_gen\achievements_gen.py" --distpath "%OUT_DIR%" -y --clean --onefile --name "parse_achievements_schema" --noupx --console -i "%ICON_FILE%" --workpath "%BUILD_TEMP_DIR%" --specpath "%BUILD_TEMP_DIR%" || (
   set /a "LAST_ERR_CODE=1"
   goto :end_script
 )
-::call "%SIGNER_TOOL%" "%OUT_DIR%\parse_achievements_schema\parse_achievements_schema.exe"
+::call "%SIGNER_TOOL%" "%OUT_DIR%\parse_achievements_schema.exe"
 
 copy /y "steam_default_icon_locked.jpg" "%OUT_DIR%\generate_emu_config\"
 copy /y "steam_default_icon_unlocked.jpg" "%OUT_DIR%\generate_emu_config\"
