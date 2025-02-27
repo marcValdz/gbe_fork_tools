@@ -35,12 +35,11 @@ def main():
     DOWNLOAD_COMMON_IMAGES = False
     SAVE_APP_NAME = False
     GENERATE_CODEX_INI = False
-    GENERATE_ACHIEVEMENT_WATCHER_SCHEMAS = False
     CLEANUP_BEFORE_GENERATING = False
     ANON_LOGIN = False
     SAVE_REFRESH_TOKEN = False
     RELATIVE_DIR = False
-    SKIP_ACH = False
+    SKIP_ACHIEVEMENTS = False
     SKIP_CONTROLLER = False
     SKIP_INVENTORY = False
     
@@ -67,8 +66,6 @@ def main():
             SAVE_APP_NAME = True
         elif lower_arg == '-cdx':
             GENERATE_CODEX_INI = True
-        elif lower_arg == '-aw':
-            GENERATE_ACHIEVEMENT_WATCHER_SCHEMAS = True
         elif lower_arg == '-clean':
             CLEANUP_BEFORE_GENERATING = True
         elif lower_arg == '-anon':
@@ -82,7 +79,7 @@ def main():
         elif lower_arg == '-reldir':
             RELATIVE_DIR = True
         elif lower_arg == '-skip_ach':
-            SKIP_ACH = True
+            SKIP_ACHIEVEMENTS = True
         elif lower_arg == '-skip_con':
             SKIP_CONTROLLER = True
         elif lower_arg == '-skip_inv':
@@ -247,7 +244,7 @@ def main():
         app_exe = ''
 
         if game_info_common:
-            if not SKIP_ACH:
+            if not SKIP_ACHIEVEMENTS:
                 achievements = generate_achievement_stats(client, appid, emu_settings_dir, backup_dir, TOP_OWNER_IDS)
             if "supported_languages" in game_info_common:
                 langs = game_info_common["supported_languages"]
@@ -351,7 +348,8 @@ def main():
                         app_exe = max(possible_executables, key=similarity_score)[0]
                 else:
                     app_exe = ""
-        if GENERATE_ACHIEVEMENT_WATCHER_SCHEMAS:
+        
+        if not SKIP_ACHIEVEMENTS:
             ach_watcher_gen.generate_all_ach_watcher_schemas(
                 base_out_dir,
                 appid,
