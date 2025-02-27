@@ -18,6 +18,7 @@ import threading
 import queue
 import shutil
 import traceback
+import difflib
 
 
 #steam ids with public profiles that own a lot of games
@@ -988,17 +989,53 @@ def main():
                     out_vdf = download_published_file(client, int(id), os.path.join(backup_dir, controller_type + str(id)))
             if "launch" in game_info["config"]:
                 launch_configs = game_info["config"]["launch"]
+                
+                # Save launch configs and extract executable info in one pass
+                possible_executables = []
+                for cfg_id, cfg in launch_configs.items():
+                    app_exe = cfg.get("executable", "")
+                    if app_exe.lower().endswith(".exe"):
+                        exe_name = app_exe.replace("\\", "/").split('/')[-1]
+                        config = cfg.get("config", {})
+                        possible_executables.append((
+                            exe_name, 
+                            config.get("osarch") == "64",  # is 64bit
+                            "betakey" in config            # is beta
+                        ))
+                
+                # Write the config file asynchronously while we process executables
                 with open(os.path.join(info_out_dir, "launch_config.json"), "wt", encoding='utf-8') as f:
                     json.dump(launch_configs, f, ensure_ascii=False, indent=2)
                 
-                for cfg in launch_configs.values():
-                    if "config" in cfg and "betakey" in cfg["config"]:
-                        continue
-                    
-                    app_exe = cfg["executable"]
-                    if app_exe.lower().endswith(".exe"):
-                        app_exe = app_exe.replace("\\", "/").split('/')[-1]
-                        break
+
+                # Fast path for single executable
+                if len(possible_executables) == 1:
+                    app_exe = possible_executables[0][0]
+                    print(f"Chose the first and only executable: {app_exe}")
+                elif possible_executables:
+                    # Fast path: if we have any non-betakey 64-bit executables, use the first one
+                    preferred_exes = [exe for exe in possible_executables if not exe[2] and exe[1]]
+                    if preferred_exes:
+                        app_exe = preferred_exes[0][0]
+                    else:
+                        # Check if all have betakey
+                        all_betakey = all(exe[2] for exe in possible_executables)
+                        
+                        if all_betakey:
+                            # Choose closest to game name
+                            game_name = game_info["common"]["name"].lower().replace(" ", "")
+                            
+                            def similarity_score(exe):
+                                exe_name = exe[0].lower().replace(" ", "")
+                                return difflib.SequenceMatcher(None, exe_name, game_name).ratio()
+                            
+                            app_exe = max(possible_executables, key=similarity_score)[0]
+                        else:
+                            # Sort by (is beta, not 64-bit) and take first
+                            app_exe = sorted(possible_executables, key=lambda x: (x[2], not x[1]))[0][0]
+                else:
+                    app_exe = ""
+
 
         if GENERATE_ACHIEVEMENT_WATCHER_SCHEMAS:
             ach_watcher_gen.generate_all_ach_watcher_schemas(
