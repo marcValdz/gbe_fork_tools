@@ -53,7 +53,4 @@ foreach ($file in $extraFiles) {
     Copy-Item -Path "$file" -Destination "$EMU_CONFIG_DIR\" -Force
 }
 
-Set-Content "$EMU_CONFIG_DIR\my_login.EXAMPLE.txt" "Check the README"
-Set-Content "$EMU_CONFIG_DIR\top_owners_ids.EXAMPLE.txt" "Check the README`nYou can use a website like: https://steamladder.com/games/"
-
 Write-Output "Build completed successfully inside: $OUT_DIR"
