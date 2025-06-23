@@ -20,6 +20,12 @@ def get_ugc_info(client, published_file_id):
     })
 
 def download_published_file(client, published_file_id, backup_directory):
+    try:
+        from steam.protobufs import steammessages_publishedfile_pb2
+    except ImportError:
+        print('[!] Missing steam.protobufs.steammessages_publishedfile_pb2. Some features (like controller configs) will be skipped.')
+        return None
+
     ugc_info = get_ugc_info(client, published_file_id)
     if ugc_info is None:
         print("Failed getting published file", published_file_id)
