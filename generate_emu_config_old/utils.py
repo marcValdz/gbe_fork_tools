@@ -46,6 +46,7 @@ Switches:
     -name:     save output in a folder named after the app (unsafe characters are removed)
     -cdx:      generate .ini file for CODEX Steam emu for each app
     -clean:    clean output folder before generating data
+    -regen:    regenerate configs for all tracked appids (can be used with or without new appids)
     -anon:     login as an anonymous account (limited access)
     -token:    save refresh_token to disk after login
     -de:       disable some extra features (by generating corresponding config files)
