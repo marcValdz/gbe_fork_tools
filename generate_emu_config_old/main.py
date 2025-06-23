@@ -22,6 +22,26 @@ from external_components import app_details, app_images, safe_name
 from controller_config_generator import parse_controller_vdf
 from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
 
+def get_appids_from_output_dir():
+    """Scan the output directory for subfolders and extract appids from their names."""
+    output_dir = "output"
+    if not os.path.exists(output_dir):
+        return set()
+    appids = set()
+    for name in os.listdir(output_dir):
+        path = os.path.join(output_dir, name)
+        if not os.path.isdir(path):
+            continue
+        # Try to extract appid from folder name
+        if '-' in name:
+            possible_appid = name.rsplit('-', 1)[-1]
+            if possible_appid.isdigit():
+                appids.add(int(possible_appid))
+                continue
+        if name.isdigit():
+            appids.add(int(name))
+    return appids
+
 def main():
     # Initialize flags and login variables
     USERNAME = ""
@@ -42,12 +62,9 @@ def main():
     SKIP_ACHIEVEMENTS = False
     SKIP_CONTROLLER = False
     SKIP_INVENTORY = False
+    REGENERATE = False
     
     prompt_for_unavailable = True
-
-    if len(sys.argv) < 2:
-        print_help()
-        sys.exit(1)
 
     appids = set()
     for arg in sys.argv[1:]:
@@ -84,15 +101,25 @@ def main():
             SKIP_CONTROLLER = True
         elif lower_arg == '-skip_inv':
             SKIP_INVENTORY = True
+        elif lower_arg == '-regen':
+            REGENERATE = True
         else:
             print(f'[X] Invalid switch: {arg}')
             print_help()
             sys.exit(1)
     
+    # If -regen is specified, get all appids from output folder names
+    if REGENERATE:
+        appids.update(get_appids_from_output_dir())
+    
     if not appids:
-        print('[X] No app id was provided')
-        print_help()
-        sys.exit(1)
+        if not REGENERATE:
+            print('[X] No app id was provided')
+            print_help()
+            sys.exit(1)
+        else:
+            print('[X] No appid folders found in output/.')
+            sys.exit(1)
 
     client = SteamClient()
     if ANON_LOGIN:
