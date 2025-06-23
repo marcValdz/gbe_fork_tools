@@ -49,10 +49,13 @@ def main():
                     src_item = os.path.join(schema_path, entry)
                     dest_item = os.path.join(dest, entry)
                     if os.path.isdir(src_item):
-                        # Remove destination directory if it exists, then copy
-                        if os.path.exists(dest_item):
-                            shutil.rmtree(dest_item)
-                        shutil.copytree(src_item, dest_item)
+                        # Merge contents of the source directory into the destination directory
+                        os.makedirs(dest_item, exist_ok=True)
+                        for file in os.listdir(src_item):
+                            src_file = os.path.join(src_item, file)
+                            dest_file = os.path.join(dest_item, file)
+                            if os.path.isfile(src_file):
+                                shutil.copy2(src_file, dest_file)
                     else:
                         shutil.copy2(src_item, dest_item)
 
