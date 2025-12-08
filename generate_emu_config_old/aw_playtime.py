@@ -2,14 +2,9 @@ import os
 import sys
 import json
 import shutil
+import psutil
 import subprocess
 import time
-
-# Try to import psutil at the top
-try:
-    import psutil
-except ImportError:
-    psutil = None
 
 # Constants
 SRC_DIR = os.path.join('.', 'output')
