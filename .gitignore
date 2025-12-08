@@ -31,3 +31,4 @@
 /migrate_gse/.py*/
 /migrate_gse/.env*/
 /migrate_gse/bin
+*.xml

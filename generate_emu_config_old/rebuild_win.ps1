@@ -35,7 +35,7 @@ $buildTargets = @(
 
 foreach ($target in $buildTargets) {
     Write-Output "Building $($target.Name)..."
-    pyinstaller $target.Script --distpath "$($target.Dir)" -y --clean --onefile --name "$($target.Name)" --noupx --console -i "$ICON_FILE" --workpath "$BUILD_TEMP_DIR" --specpath "$BUILD_TEMP_DIR"
+    python -m nuitka --msvc=latest --standalone --onefile --remove-output --output-dir="$($target.Dir)" --output-filename="$($target.Name).exe" $target.Script --assume-yes-for-downloads --windows-icon-from-ico="$ICON_FILE"
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Build failed for $($target.Name)"
         exit 1
