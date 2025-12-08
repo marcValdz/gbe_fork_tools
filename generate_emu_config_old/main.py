@@ -197,6 +197,20 @@ def main():
                 REFRESH_TOKEN = webauth.refresh_token
 
             result = client.login(USERNAME, PASSWORD, REFRESH_TOKEN)
+            print(f"Login result: {result}")
+            print(f"Client connected after login: {client.connected}")
+
+        if result != EResult.OK:
+            if REFRESH_TOKEN:
+                print("Login failed, refresh token may be stale. Removing it. Please run the script again to re-authenticate.")
+                if USERNAME in refresh_tokens:
+                    del refresh_tokens[USERNAME]
+                    with open(REFRESH_TOKENS, 'w') as f:
+                        json.dump(refresh_tokens, f, indent=4)
+                sys.exit(1)
+            else:
+                print(f"Login failed with result: {result}")
+                sys.exit(1)
 
         if SAVE_REFRESH_TOKEN:
             with open(REFRESH_TOKENS, 'w') as f:
