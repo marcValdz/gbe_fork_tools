@@ -1,187 +1,192 @@
-import copy
 import os
-import time
 import json
+import requests
+from typing import Union, List, Dict, Set
 
-def __ClosestDictKey(targetKey : str, srcDict : dict[str, object] | set[str]) -> str | None:
+def __ClosestDictKey(targetKey: str, srcDict: Union[Dict, Set]) -> Union[str, None]:
+    target_lower = targetKey.lower()
     for k in srcDict:
-        if k.lower() == f"{targetKey}".lower():
+        if k.lower() == target_lower:
             return k
-    
     return None
 
-def __generate_ach_watcher_schema(lang: str, app_id: int, achs: list[dict]) -> list[dict]:
+
+def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> List[Dict]:
+    base_icon_url = f'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/{app_id}'
     out_achs_list = []
-    for idx in range(len(achs)):
-        ach = copy.deepcopy(achs[idx])
-        out_ach_data = {}
-        
-        # adjust the displayName
-        displayName = ""
-        ach_displayName = ach.get("displayName", None)
-        if ach_displayName:
-            if type(ach_displayName) == dict: # this is a dictionary
-                displayName : str = ach_displayName.get(lang, "")
-                if not displayName and ach_displayName: # has some keys but language not found
-                    #print(f'[?] Missing language "{lang}" in "displayName" of achievement {ach["name"]}')
-                    nearestLang = __ClosestDictKey(lang, ach_displayName)
-                    if nearestLang:
-                        #print(f'[?] Best matching language "{nearestLang}"')
-                        displayName = ach_displayName[nearestLang]
-                    else:
-                        print(f'[?] Missing language "{lang}", using displayName from the first language for achievement {ach["name"]}')
-                        displayName : str = list(ach_displayName.values())[0]
-            else: # single string (or anything else)
-                displayName = ach_displayName
-            
-            del ach["displayName"]
-        else:
-            print(f'[?] Missing "displayName" in achievement {ach["name"]}')
-        
-        out_ach_data["displayName"] = displayName
-        
-        desc = ""
-        ach_desc = ach.get("description", None)
-        if ach_desc:
-            if type(ach_desc) == dict: # this is a dictionary
-                desc : str = ach_desc.get(lang, "")
-                if not desc and ach_desc: # has some keys but language not found
-                    #print(f'[?] Missing language "{lang}" in "description" of achievement {ach["name"]}')
-                    nearestLang = __ClosestDictKey(lang, ach_desc)
-                    if nearestLang:
-                        #print(f'[?] Best matching language "{nearestLang}"')
-                        desc = ach_desc[nearestLang]
-                    else:
-                        print(f'[?] Missing language "{lang}", using description from the first language for achievement {ach["name"]}')
-                        desc : str = list(ach_desc.values())[0]
-            else: # single string (or anything else)
-                desc = ach_desc
-            
-            del ach["description"]
-        else:
-            print(f'[?] Missing "description" in achievement {ach["name"]}')
-        
-        # adjust the description
-        out_ach_data["description"] = desc
 
-        # copy the rest of the data
-        out_ach_data.update(ach)
+    for ach in achs:
+        out_ach = {}
 
-        # add links to icon, icongray, and icon_gray
-        base_icon_url = r'https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps'
-        icon_hash = out_ach_data.get("icon", None)
-        if icon_hash:
-            out_ach_data["icon"] = f'{base_icon_url}/{app_id}/{icon_hash}'
+        # Name
+        out_ach["name"] = ach.get("name", "")
+
+        # DisplayName
+        ach_display = ach.get("displayName")
+        if isinstance(ach_display, dict):
+            out_ach["displayName"] = ach_display.get(lang) or next(iter(ach_display.values()), "")
         else:
-            out_ach_data["icon"] = ""
+            out_ach["displayName"] = ach_display or ""
 
-        icongray_hash = out_ach_data.get("icongray", None)
-        if icongray_hash:
-            out_ach_data["icongray"] = f'{base_icon_url}/{app_id}/{icongray_hash}'
+        # Description
+        ach_desc = ach.get("description")
+        if isinstance(ach_desc, dict):
+            out_ach["description"] = ach_desc.get(lang) or next(iter(ach_desc.values()), "")
         else:
-            out_ach_data["icongray"] = ""
+            out_ach["description"] = ach_desc or ""
 
-        icon_gray_hash = out_ach_data.get("icon_gray", None)
-        if icon_gray_hash:
-            del out_ach_data["icon_gray"] # use the old key
-            out_ach_data["icongray"] = f'{base_icon_url}/{app_id}/{icon_gray_hash}'
-        
-        if "hidden" in out_ach_data:
-            try:
-                out_ach_data["hidden"] = int(out_ach_data["hidden"])
-            except Exception as e:
-                pass
-        else:
-            out_ach_data["hidden"] = 0
+        # Hidden flag
+        out_ach["hidden"] = int(ach.get("hidden", 0))
 
-        out_achs_list.append(out_ach_data)
-    
+        # Icons
+        icon_hash = ach.get("icon")
+        icongray_hash = ach.get("icongray") or ach.get("icon_gray")
+        out_ach["icon"] = f'{base_icon_url}/{icon_hash}' if icon_hash else ""
+        out_ach["icongray"] = f'{base_icon_url}/{icongray_hash}' if icongray_hash else ""
+
+        # Copy remaining fields
+        for k, v in ach.items():
+            if k not in {"name", "displayName", "description", "hidden", "icon", "icongray"}:
+                out_ach[k] = v
+
+        out_achs_list.append(out_ach)
+
     return out_achs_list
 
+
 def generate_all_ach_watcher_schemas(
-    base_out_dir : str,
+    base_out_dir: str,
     appid: int,
-    app_name : str,
-    app_exe : str,
-    achs: list[dict],
-    small_icon_hash : str) -> None:
-    
-    ach_watcher_out_dir = os.path.join(base_out_dir, "Achievement Watcher", "steam_cache", "schema")
-    print(f"generating schemas for Achievement Watcher in: {ach_watcher_out_dir}")
+    app_name: str,
+    app_exe: str,
+    achs: List[Dict],
+    game_info_common: Dict,
+) -> None:
+    ach_watcher_out_dir = os.path.join(
+        base_out_dir, "Achievement Watcher", "steam_cache", "schema"
+    )
+    os.makedirs(ach_watcher_out_dir, exist_ok=True)
 
-    if app_exe:
-        print(f"detected app exe: '{app_exe}'")
-    else:
-        print(f"[X] couldn't detect app exe")
-    
-    # if not achs:
-    #     print("[X] No achievements were found for Achievement Watcher")
-    #     return
-    
-    small_icon_url = ''
-    if small_icon_hash:
-        small_icon_url = f"https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/{appid}/{small_icon_hash}.jpg"
-    images_base_url = r'https://cdn.cloudflare.steamstatic.com/steam/apps'
-    ach_watcher_base_schema = {
-        "appid": appid,
+    print(f"Generating schemas for Achievement Watcher in: {ach_watcher_out_dir}")
+
+    # --------------------------------------------------
+    # Store metadata (header + background ONLY)
+    # --------------------------------------------------
+    try:
+        resp = requests.get(
+            f"https://store.steampowered.com/api/appdetails?appids={appid}&l=english",
+            timeout=10,
+        )
+        resp.raise_for_status()
+        app_data = resp.json().get(str(appid), {}).get("data", {})
+    except Exception as e:
+        print(f"[!] Failed to fetch store metadata for {appid}: {e}")
+        app_data = {}
+
+    # --------------------------------------------------
+    # Icon (community_assets CDN)
+    # --------------------------------------------------
+    icon_hash = game_info_common.get("icon", "")
+    icon_url = (
+        f"https://shared.fastly.steamstatic.com/community_assets/images/apps/{appid}/{icon_hash}.jpg"
+        if icon_hash
+        else ""
+    )
+
+    # --------------------------------------------------
+    # Base schema
+    # --------------------------------------------------
+    base_schema = {
         "name": app_name,
+        "appid": appid,
         "binary": app_exe,
-        "achievement": {
-            "total": len(achs),
-        },
         "img": {
-            "header":     f"{images_base_url}/{appid}/header.jpg",
-            "background": f"{images_base_url}/{appid}/page_bg_generated_v6b.jpg",
-            "portrait":   f"{images_base_url}/{appid}/library_600x900.jpg",
-            "hero":       f"{images_base_url}/{appid}/library_hero.jpg",
-            "icon":       small_icon_url,
+            "header": app_data.get("header_image", ""),
+            "background": app_data.get("background", ""),
+            "portrait": "",
+            "hero": "",
+            "icon": icon_url,
         },
-        "apiVersion": 1,
+        "achievement": {"total": len(achs)},
     }
-    ach_watcher_gameIndex_schema = {
+
+    game_index_entry = {
         "appid": appid,
         "name": app_name,
         "binary": app_exe,
-        "icon": small_icon_hash,
+        "icon": icon_hash,
     }
-    # print(ach_watcher_gameIndex_schema)
-    
-    
-    langs : set[str] = set()
+
+    # --------------------------------------------------
+    # Detect languages
+    # --------------------------------------------------
+    langs: Set[str] = set()
     for ach in achs:
-        displayNameLangs = ach.get("displayName", None)
-        if displayNameLangs and type(displayNameLangs) == dict:
-            langs.update(list(displayNameLangs.keys()))
-            
-        descriptionLangs = ach.get("description", None)
-        if descriptionLangs and type(descriptionLangs) == dict:
-            langs.update(list(descriptionLangs.keys()))
+        if isinstance(ach.get("displayName"), dict):
+            langs.update(ach["displayName"].keys())
+        if isinstance(ach.get("description"), dict):
+            langs.update(ach["description"].keys())
 
-    if "token" in langs:
-        langs.remove("token")
-    
-    tokenKey = __ClosestDictKey("token", langs)
-    if tokenKey:
-        langs.remove(tokenKey)
-    
+    langs.discard("token")
     if not langs:
-        print("[X] Couldn't detect supported languages, assuming English is the only supported language for Achievement Watcher")
-        langs = ["english"]
-    
+        langs = {"english"}
+
+    # --------------------------------------------------
+    # Asset base (store_item_assets CDN)
+    # --------------------------------------------------
+    asset_base = (
+        f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/"
+    )
+
+    # --------------------------------------------------
+    # Per-language output
+    # --------------------------------------------------
     for lang in langs:
-        out_schema_folder = os.path.join(ach_watcher_out_dir, lang)
-        if not os.path.exists(out_schema_folder):
-            os.makedirs(out_schema_folder)
-            time.sleep(0.050)
+        out_dir = os.path.join(ach_watcher_out_dir, lang)
+        os.makedirs(out_dir, exist_ok=True)
 
-        out_schema = copy.copy(ach_watcher_base_schema)
-        out_schema["achievement"]["list"] = __generate_ach_watcher_schema(lang, appid, achs)
-        out_schema_file = os.path.join(out_schema_folder, f'{appid}.db')
-        with open(out_schema_file, "wt", encoding='utf-8') as f:
-            json.dump(out_schema, f, ensure_ascii=False, indent=2)
+        schema = base_schema.copy()
+        schema["img"] = schema["img"].copy()
 
-    gameIndex = []
-    gameIndex.append(ach_watcher_gameIndex_schema)
-    out_gameIndex_file = os.path.join(ach_watcher_out_dir, 'gameIndex.json')
-    with open(out_gameIndex_file, "wt", encoding='utf-8') as f:
-        json.dump(gameIndex, f, ensure_ascii=False, indent=2)
+        # Portrait
+        capsule_img = (
+            game_info_common
+            .get("library_assets_full", {})
+            .get("library_capsule", {})
+            .get("image", {})
+        )
+        capsule_path = capsule_img.get(lang) or capsule_img.get("english")
+        if capsule_path:
+            schema["img"]["portrait"] = asset_base + capsule_path
+
+        # Hero
+        hero_img = (
+            game_info_common
+            .get("library_assets_full", {})
+            .get("library_hero", {})
+            .get("image", {})
+        )
+        hero_path = hero_img.get(lang) or hero_img.get("english")
+        if hero_path:
+            schema["img"]["hero"] = asset_base + hero_path
+
+        schema["achievement"]["list"] = __generate_ach_watcher_schema(
+            lang, appid, achs
+        )
+
+        with open(
+            os.path.join(out_dir, f"{appid}.db"),
+            "w",
+            encoding="utf-8",
+        ) as f:
+            json.dump(schema, f, ensure_ascii=False, indent=2)
+
+    # --------------------------------------------------
+    # gameIndex.json
+    # --------------------------------------------------
+    with open(
+        os.path.join(ach_watcher_out_dir, "gameIndex.json"),
+        "w",
+        encoding="utf-8",
+    ) as f:
+        json.dump([game_index_entry], f, ensure_ascii=False, indent=2)
