@@ -9,11 +9,24 @@ import time
 # Constants
 SRC_DIR = os.path.join('.', 'output')
 AW_PATH = os.path.join(os.environ.get('APPDATA', ''), 'Achievement Watcher')
-AW_WATCHDOG_DIR = r"C:\Program Files\Achievement Watcher\nw"
+
+PROGRAM_FILES = os.environ.get("ProgramFiles", r"C:\Program Files")
+LOCAL_APPDATA = os.environ.get("LOCALAPPDATA", "")
+AW_WATCHDOG_CANDIDATES = [
+    os.path.join(PROGRAM_FILES, "Achievement Watcher", "nw"),
+    os.path.join(LOCAL_APPDATA, "Programs", "Achievement Watcher", "nw"),
+]
+
 SCHEMA_REL_PATH = os.path.join('Achievement Watcher', 'steam_cache', 'schema')
 AW_SCHEMA_DEST = os.path.join(AW_PATH, 'steam_cache', 'schema')
 AW_CFG_DEST = os.path.join(AW_PATH, 'cfg')
 
+def find_aw_watchdog_dir(candidates):
+    for path in candidates:
+        exe = os.path.join(path, "nw.exe")
+        if os.path.exists(exe):
+            return path
+    return None
 
 def aggregate_game_indexes(src):
     """Aggregate all gameIndex.json files into a single list."""
@@ -120,13 +133,18 @@ def main():
     export_game_index(sorted_list, schema_index_path, cfg_index_path)
 
     # Restart AW Watchdog
-    if not os.path.exists(AW_WATCHDOG_DIR):
-        print(f"Error: Achievement Watcher is not installed. Directory '{AW_WATCHDOG_DIR}' does not exist.")
+    aw_watchdog_dir = find_aw_watchdog_dir(AW_WATCHDOG_CANDIDATES)
+
+    if not aw_watchdog_dir:
+        print("Error: Achievement Watcher Watchdog (nw.exe) was not found in any known location.")
+        print("Checked paths:")
+        for p in AW_WATCHDOG_CANDIDATES:
+            print(f"  - {p}")
         sys.exit(1)
 
     stop_aw_watchdog()
     time.sleep(2)
-    start_aw_watchdog(AW_WATCHDOG_DIR)
+    start_aw_watchdog(aw_watchdog_dir)
 
     print("Achievement Watcher updated successfully!")
 
