@@ -234,6 +234,8 @@ def main():
         raw = client.get_product_info(apps=[appid])
         game_info = raw["apps"][appid]
         game_info_common = game_info.get("common", {})
+        # print(game_info_common) # This contains a bunch of information that can only be accessed with a valid login
+        
         app_name = game_info_common.get("name", "")
         app_name_on_disk = f"{appid}"
         if app_name:
@@ -400,7 +402,7 @@ def main():
                 app_name,
                 app_exe,
                 achievements,
-                icon)
+                game_info_common) # Technically, this object contains both app_name and app_exe. Will clean up later.
         
         if GENERATE_CODEX_INI:
             user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]

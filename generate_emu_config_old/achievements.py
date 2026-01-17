@@ -31,20 +31,22 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
                 q.task_done()
                 return
             succeeded = False
+            # Updated CDN endpoints
             for base_url in [
-                "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/",
-                "https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/"
+                "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/",
+                "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/"
             ]:
-                url = f"{base_url}{game_id}/{name}"
+                # If the image name is already a full URL, just use it directly
+                url = name if name.startswith("http") else f"{base_url}{game_id}/{name}"
                 try:
-                    response = requests.get(url, allow_redirects=True)
+                    response = requests.get(url, allow_redirects=True, timeout=10)
                     response.raise_for_status()
-                    with open(os.path.join(output_folder, name), "wb") as f:
+                    with open(os.path.join(output_folder, os.path.basename(name)), "wb") as f:
                         f.write(response.content)
                     succeeded = True
                     break
                 except Exception as e:
-                    print("HTTPError downloading", url, file=sys.stderr)
+                    print(f"HTTPError downloading {url}", file=sys.stderr)
                     traceback.print_exception(e, file=sys.stderr)
             if not succeeded:
                 print("Error: could not download", name)
@@ -58,6 +60,7 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
         q.put(name)
     q.join()
 
+    # Signal threads to exit
     for _ in range(num_threads):
         q.put(None)
     q.join()
