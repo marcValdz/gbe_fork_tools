@@ -18,22 +18,27 @@ from achievements import generate_achievement_stats
 from published_files import download_published_file
 from inventory import generate_inventory
 from depots import get_depots_infos
-from external_components import app_details, app_images, safe_name
 from controller_config_generator import parse_controller_vdf
 from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
 
+from external_components import app_images, safe_name
+
 from args.regen import get_appids_from_output_dir
+
+from external_components.app_details import download_app_details
 
 def main():
     # Initialize flags and login variables
     USERNAME = ""
     PASSWORD = ""
     
-    DISABLE_EXTRA = False
-    CONVENIENT_EXTRA = False
-    DOWNLOAD_SCREESHOTS = False
+    # Steam Store API (App Details)
+    DOWNLOAD_SCREENSHOTS = False
     DOWNLOAD_THUMBNAILS = False
     DOWNLOAD_VIDEOS = False
+    
+    DISABLE_EXTRA = False
+    CONVENIENT_EXTRA = False
     DOWNLOAD_COMMON_IMAGES = False
     SAVE_APP_NAME = False
     GENERATE_CODEX_INI = False
@@ -54,7 +59,7 @@ def main():
         if arg.isnumeric():
             appids.add(int(arg))
         elif lower_arg == '-shots':
-            DOWNLOAD_SCREESHOTS = True
+            DOWNLOAD_SCREENSHOTS = True
         elif lower_arg == '-thumbs':
             DOWNLOAD_THUMBNAILS = True
         elif lower_arg == '-vid':
@@ -216,7 +221,6 @@ def main():
         raw = client.get_product_info(apps=[appid])
         game_info = raw["apps"][appid]
         game_info_common = game_info.get("common", {})
-        # print(game_info_common) # This contains a bunch of information that can only be accessed with a valid login
         
         app_name = game_info_common.get("name", "")
         app_name_on_disk = f"{appid}"
@@ -253,10 +257,10 @@ def main():
         with open(os.path.join(info_out_dir, "product_info.json"), "w", encoding='utf-8') as f:
             json.dump(game_info, f, ensure_ascii=False, indent=2)
         
-        app_details.download_app_details(
+        app_details = download_app_details(
             base_out_dir, info_out_dir,
             appid,
-            DOWNLOAD_SCREESHOTS,
+            DOWNLOAD_SCREENSHOTS,
             DOWNLOAD_THUMBNAILS,
             DOWNLOAD_VIDEOS)
 
@@ -384,7 +388,8 @@ def main():
                 app_name,
                 app_exe,
                 achievements,
-                game_info_common) # Technically, this object contains both app_name and app_exe. Will clean up later.
+                app_details,
+                game_info_common)
         
         if GENERATE_CODEX_INI:
             user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
