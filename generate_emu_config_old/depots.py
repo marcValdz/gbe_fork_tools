@@ -1,6 +1,7 @@
 # depots.py
 import time
 
+
 def parse_branches(branches: dict) -> list:
     ret = []
     for branch_name, branch_data in branches.items():
@@ -28,6 +29,7 @@ def parse_branches(branches: dict) -> list:
                 pass
         ret.append(branch_info)
     return ret
+
 
 def get_depots_infos(raw_infos):
     try:

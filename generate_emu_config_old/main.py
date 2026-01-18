@@ -12,47 +12,54 @@ from steam.webauth import WebAuth
 from steam.enums.common import EResult
 
 # Import modules
-from config import TOP_OWNER_IDS, EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
+from config import EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
 from utils import get_exe_dir, merge_dict, write_ini_file, print_help
-from achievements import generate_achievement_stats
-from published_files import download_published_file
-from inventory import generate_inventory
-from depots import get_depots_infos
-from controller_config_generator import parse_controller_vdf
-from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
 
-from external_components import app_images, safe_name
+from depots import get_depots_infos
 
 from args.regen import get_appids_from_output_dir
+from args.name import get_app_name
+from args.achievements import generate_achievement_stats
+from args.inventory import generate_inventory
+from args.controller import download_published_file
+from controller_config_generator import parse_controller_vdf
 
+from external_components.top_owners import TOP_OWNER_IDS
 from external_components.app_details import download_app_details
+from external_components import app_images, safe_name
+from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
+
 
 def main():
     # Initialize flags and login variables
     USERNAME = ""
     PASSWORD = ""
     
+    ANON_LOGIN = False
+    SAVE_REFRESH_TOKEN = False
+    PROMPT_FOR_UNAVAILABLE = True
+
+    REGENERATE = False
+    CLEANUP_BEFORE_GENERATING = False
+    SAVE_APP_NAME = False
+    RELATIVE_DIR = False
+    
     # Steam Store API (App Details)
     DOWNLOAD_SCREENSHOTS = False
     DOWNLOAD_THUMBNAILS = False
     DOWNLOAD_VIDEOS = False
     
-    DISABLE_EXTRA = False
-    CONVENIENT_EXTRA = False
-    DOWNLOAD_COMMON_IMAGES = False
-    SAVE_APP_NAME = False
-    GENERATE_CODEX_INI = False
-    CLEANUP_BEFORE_GENERATING = False
-    ANON_LOGIN = False
-    SAVE_REFRESH_TOKEN = False
-    RELATIVE_DIR = False
+    # Steam Client API (Product Info)
+    DOWNLOAD_COMMON_IMAGES = False   
+    
     SKIP_ACHIEVEMENTS = False
     SKIP_CONTROLLER = False
     SKIP_INVENTORY = False
-    REGENERATE = False
     
-    prompt_for_unavailable = True
-
+    DISABLE_EXTRA = False
+    CONVENIENT_EXTRA = False
+    GENERATE_CODEX_INI = False
+    
     appids = set()
     for arg in sys.argv[1:]:
         lower_arg = arg.lower()
@@ -164,9 +171,9 @@ def main():
         result = None
         while result in (EResult.TryAnotherCM, EResult.ServiceUnavailable, EResult.InvalidPassword, None):
             if result in (EResult.TryAnotherCM, EResult.ServiceUnavailable):
-                if prompt_for_unavailable and result == EResult.ServiceUnavailable:
+                if PROMPT_FOR_UNAVAILABLE and result == EResult.ServiceUnavailable:
                     answer = input("Steam is down. Keep retrying? [y/n]: ").lower()
-                    prompt_for_unavailable = False
+                    PROMPT_FOR_UNAVAILABLE = False
                     if answer.startswith('n'):
                         break
                 client.reconnect(maxdelay=15)
@@ -222,18 +229,7 @@ def main():
         game_info = raw["apps"][appid]
         game_info_common = game_info.get("common", {})
         
-        app_name = game_info_common.get("name", "")
-        app_name_on_disk = f"{appid}"
-        if app_name:
-            print(f"App name on store: '{app_name}'")
-            if SAVE_APP_NAME:
-                sanitized_name = safe_name.create_safe_name(app_name)
-                if sanitized_name:
-                    app_name_on_disk = f'{sanitized_name}-{appid}'
-        else:
-            app_name = f"Unknown_Steam_app_{appid}" # we need this for later use in the Achievement Watcher
-            print("[X] Couldn't find app name on store")
-
+        app_name, app_name_on_disk = get_app_name(SAVE_APP_NAME, appid, game_info_common)
         root_backup_dir = os.path.join(get_exe_dir(RELATIVE_DIR), "backup")
         backup_dir = os.path.join(root_backup_dir, f"{appid}")
         os.makedirs(backup_dir, exist_ok=True)
@@ -264,10 +260,6 @@ def main():
             DOWNLOAD_THUMBNAILS,
             DOWNLOAD_VIDEOS)
 
-        clienticon = game_info_common.get("clienticon")
-        icon = game_info_common.get("icon")
-        logo = game_info_common.get("logo")
-        logo_small = game_info_common.get("logo_small")
         achievements = []
         languages = []
         app_exe = ''
@@ -410,10 +402,7 @@ def main():
             app_images.download_app_images(
                 base_out_dir,
                 appid,
-                clienticon,
-                icon,
-                logo,
-                logo_small)
+                game_info_common)
         
         if DISABLE_EXTRA:
             merge_dict(out_config_app_ini, EXTRA_FEATURES_DISABLE)

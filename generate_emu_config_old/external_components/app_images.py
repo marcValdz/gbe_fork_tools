@@ -2,15 +2,13 @@ import os
 import threading
 import time
 import requests
+from typing import Dict
 
 
 def download_app_images(
     base_out_dir : str,
     appid : int,
-    clienticon : str,
-    icon : str,
-    logo : str,
-    logo_small : str):
+    game_info_common : Dict):
 
     icons_out_dir = os.path.join(base_out_dir, "images")
     print(f"downloading common app images in: {icons_out_dir}")
@@ -63,7 +61,12 @@ def download_app_images(
         threads_list.append(t)
         t.start()
     
-    community_images_url = f'https://cdn.cloudflare.steamstatic.com/steamcommunity/public/images/apps/{appid}'
+    community_images_url = f'https://shared.fastly.steamstatic.com/community_assets/images/apps/{appid}'
+    clienticon = game_info_common.get("clienticon")
+    icon = game_info_common.get("icon")
+    logo = game_info_common.get("logo")
+    logo_small = game_info_common.get("logo_small")
+    
     if clienticon:
         image_url = f'{community_images_url}/{clienticon}.ico'
         t = threading.Thread(target=downloader_thread, args=('clienticon.ico', image_url), daemon=True)
