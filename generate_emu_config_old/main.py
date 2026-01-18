@@ -21,7 +21,8 @@ from depots import get_depots_infos
 from external_components import app_details, app_images, safe_name
 from controller_config_generator import parse_controller_vdf
 from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
-from regen import get_appids_from_output_dir
+
+from args.regen import get_appids_from_output_dir
 
 def main():
     # Initialize flags and login variables
