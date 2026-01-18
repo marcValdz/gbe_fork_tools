@@ -1,40 +1,55 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
+ROOT=$(pwd)
+VENV="$ROOT/.env-linux"
+OUT_DIR="$ROOT/bin/linux"
+BUILD_TEMP_DIR="$ROOT/bin/tmp/linux"
+ICON_FILE="$ROOT/icon/Froyoshark-Enkel-Steam.png"
 
-venv=".env-linux"
-out_dir="bin/linux"
-build_temp_dir="bin/tmp/linux"
+EMU_CONFIG_DIR="$OUT_DIR/generate_emu_config"
+PARSE_CONTROLLER_DIR="$OUT_DIR/parse_controller_vdf"
+PARSE_ACHIEVEMENTS_DIR="$OUT_DIR/parse_achievements_schema"
 
-[[ -d "$out_dir" ]] && rm -r -f "$out_dir"
-mkdir -p "$out_dir"
+# Clean and recreate directories
+for dir in "$OUT_DIR" "$EMU_CONFIG_DIR" "$PARSE_CONTROLLER_DIR" "$PARSE_ACHIEVEMENTS_DIR"; do
+    [[ -d "$dir" ]] && rm -rf "$dir"
+    mkdir -p "$dir"
+done
 
-[[ -d "$build_temp_dir" ]] && rm -r -f "$build_temp_dir"
+[[ -d "$BUILD_TEMP_DIR" ]] && rm -rf "$BUILD_TEMP_DIR"
 
-rm -f *.spec
+# Activate venv
+source "$VENV/bin/activate"
 
-chmod 777 "./$venv/bin/activate"
-source "./$venv/bin/activate"
+# Build executables
+declare -A BUILD_TARGETS=(
+    ["generate_emu_config"]="main.py|$EMU_CONFIG_DIR|--include-package=steam.protobufs"
+    ["update_achievement_watcher"]="aw_playtime.py|$EMU_CONFIG_DIR|"
+    ["parse_controller_vdf"]="controller_config_generator/parse_controller_vdf.py|$PARSE_CONTROLLER_DIR|"
+    ["parse_achievements_schema"]="stats_schema_achievement_gen/achievements_gen.py|$PARSE_ACHIEVEMENTS_DIR|"
+)
 
-echo building generate_emu_config...
-pyinstaller "generate_emu_config.py" --distpath "$out_dir" -y --clean --onedir --name "generate_emu_config" --noupx --console -i "NONE" --collect-submodules "steam" --workpath "$build_temp_dir" --specpath "$build_temp_dir" || exit 1
+for name in "${!BUILD_TARGETS[@]}"; do
+    IFS='|' read -r script outdir extra_args <<< "${BUILD_TARGETS[$name]}"
 
-echo building parse_controller_vdf...
-pyinstaller "controller_config_generator/parse_controller_vdf.py" --distpath "$out_dir" -y --clean --onedir --name "parse_controller_vdf" --noupx --console -i "NONE" --workpath "$build_temp_dir" --specpath "$build_temp_dir" || exit 1
+    echo "Building $name..."
 
-echo building parse_achievements_schema...
-pyinstaller "stats_schema_achievement_gen/achievements_gen.py" --distpath "$out_dir" -y --clean --onedir --name "parse_achievements_schema" --noupx --console -i "NONE" --workpath "$build_temp_dir" --specpath "$build_temp_dir" || exit 1
+    python -m nuitka \
+        --standalone \
+        --onefile \
+        --remove-output \
+        --output-dir="$outdir" \
+        --output-filename="$name" \
+        "$script" \
+        --assume-yes-for-downloads \
+        ${extra_args}
+done
 
-cp -f "steam_default_icon_locked.jpg" "$out_dir/generate_emu_config"
-cp -f "steam_default_icon_unlocked.jpg" "$out_dir/generate_emu_config"
-cp -f "README.md" "$out_dir/generate_emu_config"
-echo "Check the README" > "$out_dir/generate_emu_config/my_login.EXAMPLE.txt"
-echo "Check the README" > "$out_dir/generate_emu_config/top_owners_ids.EXAMPLE.txt"
-echo "You can use a website like: https://steamladder.com/games/" >> "$out_dir/generate_emu_config/top_owners_ids.EXAMPLE.txt"
+# Copy extra files
+EXTRA_FILES=("steam_default_icon_locked.jpg" "steam_default_icon_unlocked.jpg" "README.md")
+for file in "${EXTRA_FILES[@]}"; do
+    cp -f "$file" "$EMU_CONFIG_DIR/"
+done
 
-echo;
-echo =============
-echo Built inside: "$out_dir/"
-
-[[ -d "$build_temp_dir" ]] && rm -r -f "$build_temp_dir"
-
-deactivate
+echo "Build completed successfully inside: $OUT_DIR"
