@@ -1,28 +1,35 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
+ROOT="$(pwd)"
+BUILD_DIR="$ROOT/bin/linux"
+OUT_DIR="$ROOT/bin/package/linux"
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run as root" >&2
-  exit 1
+# Check build directory
+if [[ ! -d "$BUILD_DIR" ]]; then
+    echo "[X] Build directory not found: $BUILD_DIR" >&2
+    exit 1
 fi
 
-build_dir="bin/linux"
-out_dir="bin/package/linux"
-script_dir=$( cd -- "$( dirname -- "${0}" )" &> /dev/null && pwd )
+# Ensure tar is installed
+if ! command -v tar &> /dev/null; then
+    echo "[*] tar not found. Installing..."
+    sudo apt update -y
+    sudo apt install -y tar
+fi
 
-[[ -d "$script_dir/$build_dir" ]] || {
-  echo "[X] build folder wasn't found" >&2
-  exit 1
-}
+# Ensure output directory exists
+mkdir -p "$OUT_DIR"
 
-apt update || exit 1
-apt install tar -y || exit 1
+ARCHIVE_FILE="$OUT_DIR/generate_emu_config-linux.tar.bz2"
+if [[ -f "$ARCHIVE_FILE" ]]; then
+    echo "[*] Removing existing archive: $ARCHIVE_FILE"
+    rm -f "$ARCHIVE_FILE"
+fi
 
-mkdir -p "$script_dir/$out_dir"
+# Package the build directory
+pushd "$BUILD_DIR" > /dev/null
+tar -cjf "$ARCHIVE_FILE" */
+popd > /dev/null
 
-archive_file="$script_dir/$out_dir/generate_emu_config-linux.tar.bz2"
-[[ -f "$archive_file" ]] && rm -f "$archive_file"
-
-pushd "$script_dir/$build_dir"
-tar -c -j -vf "$archive_file" $(ls -d */)
-popd
+echo "[*] Build and packaging completed successfully: $ARCHIVE_FILE"

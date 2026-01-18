@@ -1,35 +1,57 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
+ROOT="$(pwd)"
+VENV="$ROOT/.env-linux"
+REQS_FILE="$ROOT/requirements.txt"
+PYTHON_VERSION="3.13"
 
-if [ "$(id -u)" -ne 0 ]; then
-  echo "Please run as root" >&2
-  exit 1
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Install Python if missing
+if ! command_exists python$PYTHON_VERSION; then
+    echo "[*] Python $PYTHON_VERSION not found. Installing..."
+    sudo apt update -y
+    sudo apt install -y python$PYTHON_VERSION python$PYTHON_VERSION-venv python$PYTHON_VERSION-dev
 fi
 
-python_package="python3.12"
-venv=".env-linux"
-reqs_file="requirements.txt"
-script_dir=$( cd -- "$( dirname -- "${0}" )" &> /dev/null && pwd )
+# Install dependencies if missing
+for cmd in git patchelf ccache; do
+    if ! command_exists "$cmd"; then
+        echo "[*] $cmd not found. Installing..."
+        sudo apt update -y
+        sudo apt install -y "$cmd"
+    fi
+done
 
-apt update -y || exit 1
-apt install software-properties-common -y
-add-apt-repository ppa:deadsnakes/ppa -y
-apt update -y || exit 1
-apt install "$python_package" -y || exit 1
-apt install "$python_package-dev" -y || exit 1
-apt install "$python_package-venv" -y || exit 1
-apt install python3-dev -y || exit 1
+# Install C compiler if missing (needed for Nuitka)
+if ! command_exists gcc || ! command_exists g++; then
+    echo "[*] GCC/G++ not found. Installing build-essential..."
+    sudo apt update -y
+    sudo apt install -y build-essential
+fi
 
-[[ -d "$script_dir/$venv" ]] && rm -r -f "$script_dir/$venv"
+# Remove existing virtual environment if it exists
+if [[ -d "$VENV" ]]; then
+    rm -rf "$VENV"
+fi
 
-$python_package -m venv "$script_dir/$venv" || exit 1
+# Create virtual environment
+python$PYTHON_VERSION -m venv "$VENV"
+echo "Virtual environment created at $VENV"
 sleep 1
 
-chmod 777 "$script_dir/$venv/bin/activate"
-source "$script_dir/$venv/bin/activate"
+# Activate virtual environment
+source "$VENV/bin/activate"
 
-pip install -r "$script_dir/$reqs_file"
-exit_code=$?
+# Upgrade pip and install dependencies
+pip install --upgrade pip
+pip install -r "$REQS_FILE"
 
+# Deactivate virtual environment
 deactivate
-exit $exit_code
+
+echo "Virtual environment setup completed successfully."
