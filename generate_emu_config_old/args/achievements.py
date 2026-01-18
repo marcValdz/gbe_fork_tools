@@ -10,6 +10,7 @@ from steam.core.msg import MsgProto
 from steam.enums.emsg import EMsg
 from stats_schema_achievement_gen import achievements_gen
 
+
 def get_stats_schema(client, game_id, owner_id):
     message = MsgProto(EMsg.ClientGetUserStats)
     message.body.game_id = game_id
@@ -19,6 +20,7 @@ def get_stats_schema(client, game_id, owner_id):
 
     client.send(message)
     return client.wait_msg(EMsg.ClientGetUserStatsResponse, timeout=5)
+
 
 def download_achievement_images(game_id: int, image_names: set, output_folder: str):
     print(f"Downloading achievement images in '{output_folder}', count = {len(image_names)}")
@@ -65,6 +67,7 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
         q.put(None)
     q.join()
     print("Finished downloading achievement images")
+
 
 def generate_achievement_stats(client, game_id: int, output_directory, backup_directory, top_owner_ids) -> list:
     stats_schema_found = None
