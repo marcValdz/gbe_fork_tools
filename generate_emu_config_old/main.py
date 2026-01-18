@@ -6,13 +6,15 @@ import json
 import shutil
 import difflib
 import traceback
+import argparse
+import textwrap
 
 from steam.client import SteamClient
 from steam.webauth import WebAuth
 from steam.enums.common import EResult
 
 # Import modules
-from utils import get_exe_dir, merge_dict, write_ini_file, print_help
+from utils import get_exe_dir, merge_dict, write_ini_file
 from controller_config_generator import parse_controller_vdf
 
 from external_components.top_owners import TOP_OWNER_IDS
@@ -28,97 +30,85 @@ from args.inventory import generate_inventory
 from args.controller import download_published_file
 from args.config import EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
 
-
 def main():
-    # Initialize flags and login variables
-    USERNAME = ""
-    PASSWORD = ""
-    
-    ANON_LOGIN = False
-    SAVE_REFRESH_TOKEN = False
-    PROMPT_FOR_UNAVAILABLE = True
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(sys.argv[0]),
+        formatter_class=argparse.RawTextHelpFormatter,
+        description=textwrap.dedent("""\
+            This is a command line tool to generate the steam_settings folder for the emu, you need a Steam account to grab most info, but you can use an anonymous account with limited access to Steam data.
+        """),
+        epilog=textwrap.dedent("""\
+            Usage examples:
+              %(prog)s 421050 420 480
+              %(prog)s -shots -thumbs -vid -imgs -name -cdx -clean -de 421050 480
+              %(prog)s -shots -thumbs -vid -imgs -name -cdx -clean -de -cve 421050
+              %(prog)s -regen
+              
+            Automate the login prompt:
+              • Create a file called 'my_login.txt' beside the script
+                - Line 1: username
+                - Line 2: password
 
-    REGENERATE = False
-    CLEANUP_BEFORE_GENERATING = False
-    SAVE_APP_NAME = False
-    RELATIVE_DIR = False
-    
-    # Steam Store API (App Details)
-    DOWNLOAD_SCREENSHOTS = False
-    DOWNLOAD_THUMBNAILS = False
-    DOWNLOAD_VIDEOS = False
-    
-    # Steam Client API (Product Info)
-    DOWNLOAD_COMMON_IMAGES = False   
-    
-    SKIP_DLC = False
-    SKIP_ACHIEVEMENTS = False
-    SKIP_CONTROLLER = False
-    SKIP_INVENTORY = False
-    
-    DISABLE_EXTRA = False
-    CONVENIENT_EXTRA = False
-    GENERATE_CODEX_INI = False
-    
-    appids = set()
-    for arg in sys.argv[1:]:
-        lower_arg = arg.lower()
-        if arg.isnumeric():
-            appids.add(int(arg))
-        elif lower_arg == '-shots':
-            DOWNLOAD_SCREENSHOTS = True
-        elif lower_arg == '-thumbs':
-            DOWNLOAD_THUMBNAILS = True
-        elif lower_arg == '-vid':
-            DOWNLOAD_VIDEOS = True
-        elif lower_arg == '-imgs':
-            DOWNLOAD_COMMON_IMAGES = True
-        elif lower_arg == '-name':
-            SAVE_APP_NAME = True
-        elif lower_arg == '-cdx':
-            GENERATE_CODEX_INI = True
-        elif lower_arg == '-clean':
-            CLEANUP_BEFORE_GENERATING = True
-        elif lower_arg == '-anon':
-            ANON_LOGIN = True
-        elif lower_arg == '-token':
-            SAVE_REFRESH_TOKEN = True
-        elif lower_arg == '-de':
-            DISABLE_EXTRA = True
-        elif lower_arg == '-cve':
-            CONVENIENT_EXTRA = True
-        elif lower_arg == '-reldir':
-            RELATIVE_DIR = True
-        elif lower_arg == '-skip_dlc':
-            SKIP_DLC = True
-        elif lower_arg == '-skip_ach':
-            SKIP_ACHIEVEMENTS = True
-        elif lower_arg == '-skip_con':
-            SKIP_CONTROLLER = True
-        elif lower_arg == '-skip_inv':
-            SKIP_INVENTORY = True
-        elif lower_arg == '-regen':
-            REGENERATE = True
-        else:
-            print(f'[X] Invalid switch: {arg}')
-            print_help()
-            sys.exit(1)
-    
-    # If -regen is specified, get all appids from output folder names
-    if REGENERATE:
+              • Or set environment variables (override my_login.txt):
+                GSE_CFG_USERNAME
+                GSE_CFG_PASSWORD
+        """),
+    )
+
+    # Positional arguments
+    parser.add_argument(
+        "appids",
+        nargs="*",
+        type=int,
+        help="One or more Steam App IDs"
+    )
+
+    # Login / auth
+    parser.add_argument("-anon", action="store_true", help="Login as anonymous account (limited access)")
+    parser.add_argument("-token", action="store_true", help="Save refresh token to disk after login")
+
+    # Steam Store API
+    parser.add_argument("-shots", action="store_true", help="Download screenshots for each app if available")
+    parser.add_argument("-thumbs", action="store_true", help="Download screenshot thumbnails if available")
+    parser.add_argument("-vid", action="store_true", help="Download the first available video")
+    parser.add_argument("-imgs", action="store_true", help="Download common images (background, icon, logo, etc.)")
+
+    # Skip flags
+    parser.add_argument("-skip_dlc", action="store_true", help="Skip downloadable content info generation")
+    parser.add_argument("-skip_ach", action="store_true", help="Skip achievements and Achievement Watcher schema generation")
+    parser.add_argument("-skip_con", action="store_true", help="Skip controller configuration generation")
+    parser.add_argument("-skip_inv", action="store_true", help="Skip inventory data generation")
+
+    # Output / generation
+    parser.add_argument("-name", action="store_true", help="Save output in a folder named after the app")
+    parser.add_argument("-reldir", action="store_true", help="Use relative directories for temp/input files")
+    parser.add_argument("-clean", action="store_true", help="Clean output folder before generating data")
+    parser.add_argument("-regen", action="store_true", help="Regenerate configs for all tracked app IDs")
+
+    # Extras
+    parser.add_argument("-de", action="store_true", help="Disable extra features")
+    parser.add_argument("-cve", action="store_true", help="Enable convenient extra features")
+    parser.add_argument("-cdx", action="store_true", help="Generate CODEX and ColdClient Steam emu .ini files")
+
+    args = parser.parse_args()
+
+    # Start with explicitly provided appids
+    appids = set(args.appids)
+
+    # If regenerating, augment with tracked appids
+    if args.regen:
         appids.update(get_appids_from_output_dir())
-    
+
+    # If nothing to do, decide why and exit once
     if not appids:
-        if not REGENERATE:
-            print('[X] No app id was provided')
-            print_help()
-            sys.exit(1)
+        if args.regen:
+            print("[X] No appid folders found in output/.")
         else:
-            print('[X] No appid folders found in output/.')
-            sys.exit(1)
+            parser.print_help()
+        sys.exit(1)
 
     client = SteamClient()
-    if ANON_LOGIN:
+    if args.anon:
         result = client.anonymous_login()
         trials = 5
         while result != EResult.OK and trials > 0:
@@ -126,7 +116,7 @@ def main():
             result = client.anonymous_login()
             trials -= 1
     else:
-        my_login_file = os.path.join(get_exe_dir(RELATIVE_DIR), "my_login.txt")
+        my_login_file = os.path.join(get_exe_dir(args.reldir), "my_login.txt")
         if os.path.isfile(my_login_file):
             with open(my_login_file, "r", encoding="utf-8") as f:
                 filedata = [line.strip() for line in f if line.strip()]
@@ -142,7 +132,7 @@ def main():
         if env_password:
             PASSWORD = env_password
 
-        REFRESH_TOKENS = os.path.join(get_exe_dir(RELATIVE_DIR), "refresh_tokens.json")
+        REFRESH_TOKENS = os.path.join(get_exe_dir(args.reldir), "refresh_tokens.json")
         refresh_tokens = {}
         if os.path.isfile(REFRESH_TOKENS):
             with open(REFRESH_TOKENS) as f:
@@ -208,20 +198,20 @@ def main():
                 print(f"Login failed with result: {result}")
                 sys.exit(1)
 
-        if SAVE_REFRESH_TOKEN:
+        if args.token:
             with open(REFRESH_TOKENS, 'w') as f:
                 refresh_tokens.update({USERNAME: REFRESH_TOKEN})
                 json.dump(refresh_tokens, f, indent=4)
 
     # Prepend additional owner IDs from file if available
-    top_owners_file = os.path.join(get_exe_dir(RELATIVE_DIR), "top_owners_ids.txt")
+    top_owners_file = os.path.join(get_exe_dir(args.reldir), "top_owners_ids.txt")
     if os.path.isfile(top_owners_file):
         with open(top_owners_file, "r", encoding="utf-8") as f:
             filedata = [line.strip() for line in f if line.strip().isdigit()]
         all_ids = list(map(int, filedata))
         TOP_OWNER_IDS[:0] = all_ids
 
-    if not ANON_LOGIN:
+    if not args.anon:
         TOP_OWNER_IDS.insert(0, client.steam_id.as_64)
 
     for appid in appids:
@@ -231,8 +221,8 @@ def main():
         game_info = raw["apps"][appid]
         game_info_common = game_info.get("common", {})
         
-        app_name, app_name_on_disk = get_app_name(SAVE_APP_NAME, appid, game_info_common)
-        root_backup_dir = os.path.join(get_exe_dir(RELATIVE_DIR), "backup")
+        app_name, app_name_on_disk = get_app_name(args.name, appid, game_info_common)
+        root_backup_dir = os.path.join(get_exe_dir(args.reldir), "backup")
         backup_dir = os.path.join(root_backup_dir, f"{appid}")
         os.makedirs(backup_dir, exist_ok=True)
 
@@ -241,7 +231,7 @@ def main():
         emu_settings_dir = os.path.join(base_out_dir, "steam_settings")
         info_out_dir = os.path.join(base_out_dir, "info")
 
-        if CLEANUP_BEFORE_GENERATING:
+        if args.clean:
             print("Cleaning output folder before generating data")
             if os.path.exists(base_out_dir):
                 shutil.rmtree(base_out_dir)
@@ -258,16 +248,16 @@ def main():
         app_details = download_app_details(
             base_out_dir, info_out_dir,
             appid,
-            DOWNLOAD_SCREENSHOTS,
-            DOWNLOAD_THUMBNAILS,
-            DOWNLOAD_VIDEOS)
+            args.shots,
+            args.thumbs,
+            args.vid)
 
         achievements = []
         languages = []
         app_exe = ''
 
         if game_info_common:
-            if not SKIP_ACHIEVEMENTS:
+            if not args.skip_ach:
                 achievements = generate_achievement_stats(client, appid, emu_settings_dir, backup_dir, TOP_OWNER_IDS)
             if "supported_languages" in game_info_common:
                 langs = game_info_common["supported_languages"]
@@ -283,7 +273,7 @@ def main():
             f.write(str(appid))
 
         dlc_config_list = []
-        dlc_list, depot_app_list, all_depots, all_branches = get_depots_infos(SKIP_DLC, game_info)
+        dlc_list, depot_app_list, all_depots, all_branches = get_depots_infos(args.skip_dlc, game_info)
         dlc_raw = {}
         if dlc_list:
             dlc_raw = client.get_product_info(apps=dlc_list)["apps"]
@@ -327,7 +317,7 @@ def main():
 
         config_generated = False
         if "config" in game_info:
-            if not SKIP_CONTROLLER and "steamcontrollerconfigdetails" in game_info["config"]:
+            if not args.skip_con and "steamcontrollerconfigdetails" in game_info["config"]:
                 controller_details = game_info["config"]["steamcontrollerconfigdetails"]
                 print('Downloading controller vdf files')
                 for id in controller_details:
@@ -342,7 +332,7 @@ def main():
                             print('Controller type supported')
                             parse_controller_vdf.generate_controller_config(out_vdf.decode('utf-8'), os.path.join(emu_settings_dir, "controller"))
                             config_generated = True
-            if not SKIP_CONTROLLER and "steamcontrollertouchconfigdetails" in game_info["config"]:
+            if not args.skip_con and "steamcontrollertouchconfigdetails" in game_info["config"]:
                 controller_details = game_info["config"]["steamcontrollertouchconfigdetails"]
                 for id in controller_details:
                     details = controller_details[id]
@@ -375,7 +365,7 @@ def main():
                 else:
                     app_exe = ""
         
-        if not SKIP_ACHIEVEMENTS:
+        if not args.skip_ach:
             ach_watcher_gen.generate_all_ach_watcher_schemas(
                 base_out_dir,
                 appid,
@@ -385,7 +375,7 @@ def main():
                 app_details,
                 game_info_common)
         
-        if GENERATE_CODEX_INI:
+        if args.cdx:
             user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
             username = client.user.name or "Player"
             cdx_gen.generate_cdx_ini(
@@ -400,21 +390,21 @@ def main():
                 appid,
                 app_exe)
         
-        if DOWNLOAD_COMMON_IMAGES:
+        if args.imgs:
             app_images.download_app_images(
                 base_out_dir,
                 appid,
                 game_info_common)
 
-        if DISABLE_EXTRA:
+        if args.de:
             merge_dict(out_config_app_ini, EXTRA_FEATURES_DISABLE)
-        if CONVENIENT_EXTRA:
+        if args.cve:
             merge_dict(out_config_app_ini, EXTRA_FEATURES_CONVENIENT)
         if out_config_app_ini:
             write_ini_file(emu_settings_dir, out_config_app_ini)
 
         inventory_data = None
-        if not SKIP_INVENTORY:
+        if not args.skip_inv:
             inventory_data = generate_inventory(client, appid)
         if inventory_data is not None:
             out_inventory = {}
