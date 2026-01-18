@@ -188,25 +188,28 @@ def __download_videos(base_out_dir : str, appid : int, app_details : dict):
 
 
 def download_app_details(
-    base_out_dir : str,
-    info_out_dir : str,
-    appid : int,
-    download_screenshots : bool,
-    download_thumbnails : bool,
-    download_vids : bool):
-
+    base_out_dir: str,
+    info_out_dir: str,
+    appid: int,
+    download_screenshots: bool,
+    download_thumbnails: bool,
+    download_vids: bool,
+):
     details_out_file = os.path.join(info_out_dir, "app_details.json")
     print(f"downloading app details in: {details_out_file}")
 
-    app_details : dict = None
-    last_exception : Exception | str = None
+    app_details: dict | None = None
+    last_exception: Exception | str | None = None
+
     # try 3 times
     for download_trial in range(3):
         try:
-            r = requests.get(f'http://store.steampowered.com/api/appdetails?appids={appid}&format=json')
-            if r.status_code == requests.codes.ok: # if download was successfull
-                result : dict = r.json()
-                json_ok = result.get(f'{appid}', {}).get('success', False)
+            r = requests.get(
+                f"http://store.steampowered.com/api/appdetails?appids={appid}&format=json"
+            )
+            if r.status_code == requests.codes.ok:
+                result: dict = r.json()
+                json_ok = result.get(str(appid), {}).get("success", False)
                 if json_ok:
                     app_details = result
                     break
@@ -221,14 +224,17 @@ def download_app_details(
         err = "[X] failed to download app details"
         if last_exception:
             err += f', last error: "{last_exception}"'
-        
         print(err)
-        return
+        return None  # explicit for clarity
 
-    with open(details_out_file, "wt", encoding='utf-8') as f:
+    with open(details_out_file, "wt", encoding="utf-8") as f:
         json.dump(app_details, f, ensure_ascii=False, indent=2)
-    
-    __download_screenshots(base_out_dir, appid, app_details, download_screenshots, download_thumbnails)
-        
+
+    __download_screenshots(
+        base_out_dir, appid, app_details, download_screenshots, download_thumbnails
+    )
+
     if download_vids:
         __download_videos(base_out_dir, appid, app_details)
+
+    return app_details
