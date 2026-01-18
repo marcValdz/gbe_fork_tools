@@ -1,15 +1,12 @@
-# Enable strict mode for better error handling
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Define constants
 $ROOT = (Get-Location).Path
 $VENV = "$ROOT\.env-win"
 $OUT_DIR = "$ROOT\bin\win"
 $BUILD_TEMP_DIR = "$ROOT\bin\tmp\win"
 $ICON_FILE = "$ROOT\icon\Froyoshark-Enkel-Steam.ico"
 
-# Define output directories for specific executables
 $EMU_CONFIG_DIR = "$OUT_DIR\generate_emu_config"
 $PARSE_CONTROLLER_DIR = "$OUT_DIR\parse_controller_vdf"
 $PARSE_ACHIEVEMENTS_DIR = "$OUT_DIR\parse_achievements_schema"
@@ -27,18 +24,52 @@ if (Test-Path $BUILD_TEMP_DIR) { Remove-Item -Recurse -Force $BUILD_TEMP_DIR }
 
 # Build executables
 $buildTargets = @(
-    @{ Script = "main.py"; Name = "generate_emu_config"; Dir = $EMU_CONFIG_DIR },
-    @{ Script = "aw_playtime.py"; Name = "update_achievement_watcher"; Dir = $EMU_CONFIG_DIR },
-    @{ Script = "controller_config_generator\parse_controller_vdf.py"; Name = "parse_controller_vdf"; Dir = $PARSE_CONTROLLER_DIR },
-    @{ Script = "stats_schema_achievement_gen\achievements_gen.py"; Name = "parse_achievements_schema"; Dir = $PARSE_ACHIEVEMENTS_DIR }
+    @{
+        ExeName = "generate_emu_config"
+        ScriptName = "main.py"
+        Dir = $EMU_CONFIG_DIR
+        ExtraArgs = @("--include-package=steam.protobufs")
+    },
+    @{
+        ExeName = "update_achievement_watcher"
+        ScriptName = "aw_playtime.py"
+        Dir = $EMU_CONFIG_DIR
+        ExtraArgs = @()
+    },
+    @{
+        ExeName = "parse_controller_vdf"
+        ScriptName = "controller_config_generator\parse_controller_vdf.py"
+        Dir = $PARSE_CONTROLLER_DIR
+        ExtraArgs = @()
+    },
+    @{
+        ExeName = "parse_achievements_schema"
+        ScriptName = "stats_schema_achievement_gen\achievements_gen.py"
+        Dir = $PARSE_ACHIEVEMENTS_DIR
+        ExtraArgs = @()
+    }
 )
 
-foreach ($target in $buildTargets) {
-    Write-Output "Building $($target.Name)..."
-    python -m nuitka --msvc=latest --standalone --onefile --remove-output --output-dir="$($target.Dir)" --output-filename="$($target.Name).exe" $target.Script --assume-yes-for-downloads --windows-icon-from-ico="$ICON_FILE"
+foreach ($t in $buildTargets) {
+    Write-Output "Building $($t.ExeName)..."
+
+    $args = @(
+        "-m", "nuitka",
+        "--msvc=latest",
+        "--standalone",
+        "--onefile",
+        "--remove-output",
+        "--output-dir=$($t.Dir)",
+        "--output-filename=$($t.ExeName).exe",
+        $t.ScriptName,
+        "--assume-yes-for-downloads",
+        "--windows-icon-from-ico=$ICON_FILE"
+    ) + $t.ExtraArgs
+
+    python @args
+
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Build failed for $($target.Name)"
-        exit 1
+        throw "Build failed for $($t.Name)"
     }
 }
 
