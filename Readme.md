@@ -2,7 +2,7 @@
 
 ## Overview
 
-This fork introduces several enhancements to improve the functionality, maintainability, and usability of the GBE project. Key changes include refactored Python scripts, improved Windows build scripts, better handling of achievements, and automated data retrieval for `top_owner_ids.txt`.
+This fork introduces several enhancements to improve the functionality, maintainability, and usability of the GBE Tools. Key changes include refactored Python scripts, improved build scripts, better handling of achievements, and automated data retrieval for `top_owner_ids.txt`.
 
 ## Features & Improvements
 
@@ -33,5 +33,5 @@ This fork introduces several enhancements to improve the functionality, maintain
 
 ## Notes
 
-- Windows executables are now built using [**Nuitka**](https://nuitka.net/), which requires [**Microsoft Visual C++ Build Tools**](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and [**UPX**](https://upx.github.io/) (install via Scoop or other means).
-- Linux build scripts have not yet been updated, as [**Achievement Watcher**](https://github.com/xan105/Achievement-Watcher) is Windows-only.
+- Executables are now built using [**Nuitka**](https://nuitka.net/), which requires [**Microsoft Visual C++ Build Tools**](https://visualstudio.microsoft.com/visual-cpp-build-tools/). 
+- The build scripts are written in a way that it will fetch all possible dependencies even on a compeletely fresh install (at least for Linux).
