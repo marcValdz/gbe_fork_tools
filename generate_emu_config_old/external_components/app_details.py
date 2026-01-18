@@ -7,7 +7,7 @@ import threading
 import time
 import requests
 import urllib.parse
-from external_components import safe_name
+from utils import create_safe_name
 
 def __downloader_thread(q : queue.Queue[tuple[str, str]]):
     while True:

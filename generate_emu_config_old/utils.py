@@ -2,6 +2,8 @@
 import os
 import sys
 import pathlib
+import re
+
 
 def get_exe_dir(relative=False):
     if relative:
@@ -11,12 +13,14 @@ def get_exe_dir(relative=False):
     else:
         return os.path.dirname(os.path.abspath(__file__))
 
+
 def merge_dict(dest: dict, src: dict):
     for key, value in src.items():
         if key in dest and isinstance(dest[key], dict) and isinstance(value, dict):
             merge_dict(dest[key], value)
         else:
             dest[key] = value
+
 
 def write_ini_file(base_path: str, out_ini: dict):
     for filename, sections in out_ini.items():
@@ -29,3 +33,17 @@ def write_ini_file(base_path: str, out_ini: dict):
                         f.write(f'# {comment}\n')
                     f.write(f'{key}={val}\n')
                 f.write('\n')
+
+
+ALLOWED_CHARS = set([
+    '`', '~', '!', '@', '#', '$', '%', '&', '(', ')', '-', '_', '=',
+    '+', '[', '{', ']', '}', ';', '\'', ',', '.', ' ', '\t', '®', '™',
+])
+
+def create_safe_name(app_name : str):
+    safe_name = ''.join(c for c in f'{app_name}' if c.isalnum() or c in ALLOWED_CHARS)\
+        .rstrip()\
+        .rstrip('.')\
+        .replace('\t', ' ')
+    safe_name = re.sub('\s\s+', ' ', safe_name)
+    return safe_name
