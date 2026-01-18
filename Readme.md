@@ -11,25 +11,27 @@ This fork introduces several enhancements to improve the functionality, maintain
 - `generate_emu_config.py` has been refactored into separate files to enhance readability and maintainability.
 - Windows build scripts now utilize PowerShell instead of batch scripts.
 - The rebuild script now generates full `.exe` files rather than using an `_internal` folder for dependencies.
+- Replaced manual flag handling with `argparse`. This should make extensibility much easier.
 
 ### Achievement Watcher Integration
 
 - Added support for **Achievement Watcher Playtime Tracking** by running `update_achievement_watcher.exe`.
-- All achievement-related processes can be skipped using the `-skip_ach` argument.
+- All achievement-related processes can be skipped using the `-skip_ach` flag.
 - Implemented `difflib`'s similarity algorithm to accurately detect the correct `.exe` for Achievement Watcher.
 
 ### Steam Emulator Configuration
 
 - The Codex `steam_emu.ini` generation process now automatically populates `AccountId` and `UserName`:
   - If logged in, it retrieves and fills the correct values.
-  - If run with the `-anon` argument, `AccountId` is set to **random** and `UserName` defaults to **Player**.
+  - If run with the `-anon` flag, `AccountId` is set to **random** and `UserName` defaults to **Player**.
+- It's now possible to skip downloading downloadable content data using the `-skip_dlc` flag.
 
 ### Automated Data Retrieval
 
-- `top_owner_ids.txt` is now programmatically generated using the latest scraped data from [**SteamLadder**](https://steamladder.com/ladder/games/).
+- `top_owner_ids.txt` is now programmatically generated using the latest data scraped from [**SteamLadder**](https://steamladder.com/ladder/games/).
 - The first execution creates the file, and subsequent runs use the existing data unless manually deleted for a fresh scrape.
 
 ## Notes
 
-- Windows executables are now built using Nuitka, which requires Microsoft Visual C++ Build Tools and UPX (install via Scoop or other means).
-- Linux scripts have not yet been updated, as [**Achievement Watcher**](https://github.com/xan105/Achievement-Watcher) is Windows-only.
+- Windows executables are now built using [**Nuitka**](https://nuitka.net/), which requires [**Microsoft Visual C++ Build Tools**](https://visualstudio.microsoft.com/visual-cpp-build-tools/) and [**UPX**](https://upx.github.io/) (install via Scoop or other means).
+- Linux build scripts have not yet been updated, as [**Achievement Watcher**](https://github.com/xan105/Achievement-Watcher) is Windows-only.
