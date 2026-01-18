@@ -12,22 +12,21 @@ from steam.webauth import WebAuth
 from steam.enums.common import EResult
 
 # Import modules
-from config import EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
 from utils import get_exe_dir, merge_dict, write_ini_file, print_help
-
-from depots import get_depots_infos
-
-from args.regen import get_appids_from_output_dir
-from args.name import get_app_name
-from args.achievements import generate_achievement_stats
-from args.inventory import generate_inventory
-from args.controller import download_published_file
 from controller_config_generator import parse_controller_vdf
 
 from external_components.top_owners import TOP_OWNER_IDS
 from external_components.app_details import download_app_details
 from external_components import app_images, safe_name
 from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
+
+from args.regen import get_appids_from_output_dir
+from args.name import get_app_name
+from args.dlc import get_depots_infos
+from args.achievements import generate_achievement_stats
+from args.inventory import generate_inventory
+from args.controller import download_published_file
+from args.config import EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
 
 
 def main():
@@ -52,6 +51,7 @@ def main():
     # Steam Client API (Product Info)
     DOWNLOAD_COMMON_IMAGES = False   
     
+    SKIP_DLC = False
     SKIP_ACHIEVEMENTS = False
     SKIP_CONTROLLER = False
     SKIP_INVENTORY = False
@@ -89,6 +89,8 @@ def main():
             CONVENIENT_EXTRA = True
         elif lower_arg == '-reldir':
             RELATIVE_DIR = True
+        elif lower_arg == '-skip_dlc':
+            SKIP_DLC = True
         elif lower_arg == '-skip_ach':
             SKIP_ACHIEVEMENTS = True
         elif lower_arg == '-skip_con':
@@ -281,7 +283,7 @@ def main():
             f.write(str(appid))
 
         dlc_config_list = []
-        dlc_list, depot_app_list, all_depots, all_branches = get_depots_infos(game_info)
+        dlc_list, depot_app_list, all_depots, all_branches = get_depots_infos(SKIP_DLC, game_info)
         dlc_raw = {}
         if dlc_list:
             dlc_raw = client.get_product_info(apps=dlc_list)["apps"]
@@ -403,7 +405,7 @@ def main():
                 base_out_dir,
                 appid,
                 game_info_common)
-        
+
         if DISABLE_EXTRA:
             merge_dict(out_config_app_ini, EXTRA_FEATURES_DISABLE)
         if CONVENIENT_EXTRA:

@@ -6,9 +6,13 @@ import psutil
 import subprocess
 import time
 
+
 # Constants
 SRC_DIR = os.path.join('.', 'output')
 AW_PATH = os.path.join(os.environ.get('APPDATA', ''), 'Achievement Watcher')
+SCHEMA_REL_PATH = os.path.join('Achievement Watcher', 'steam_cache', 'schema')
+AW_SCHEMA_DEST = os.path.join(AW_PATH, 'steam_cache', 'schema')
+AW_CFG_DEST = os.path.join(AW_PATH, 'cfg')
 
 PROGRAM_FILES = os.environ.get("ProgramFiles", r"C:\Program Files")
 LOCAL_APPDATA = os.environ.get("LOCALAPPDATA", "")
@@ -17,9 +21,6 @@ AW_WATCHDOG_CANDIDATES = [
     os.path.join(LOCAL_APPDATA, "Programs", "Achievement Watcher", "nw"),
 ]
 
-SCHEMA_REL_PATH = os.path.join('Achievement Watcher', 'steam_cache', 'schema')
-AW_SCHEMA_DEST = os.path.join(AW_PATH, 'steam_cache', 'schema')
-AW_CFG_DEST = os.path.join(AW_PATH, 'cfg')
 
 def find_aw_watchdog_dir(candidates):
     for path in candidates:
@@ -27,6 +28,7 @@ def find_aw_watchdog_dir(candidates):
         if os.path.exists(exe):
             return path
     return None
+
 
 def aggregate_game_indexes(src):
     """Aggregate all gameIndex.json files into a single list."""
@@ -49,6 +51,7 @@ def aggregate_game_indexes(src):
                         print(f"Error parsing JSON file {json_path}: {e}")
                         continue
     return game_list
+
 
 def merge_schema_files(src, dest):
     """Merge all schema files from all games into the destination directory."""
@@ -77,6 +80,7 @@ def export_game_index(sorted_list, schema_index_path, cfg_index_path):
     with open(cfg_index_path, "w", encoding="utf-8") as f:
         f.write(sorted_json)
 
+
 def stop_aw_watchdog():
     print("Stopping AW Watchdog (node.exe)...")
     if psutil:
@@ -98,6 +102,7 @@ def stop_aw_watchdog():
         except subprocess.CalledProcessError:
             print("Error: node.exe is not running or could not be stopped.")
 
+
 def start_aw_watchdog(wd):
     print("Restarting AW Watchdog (node.exe)...")
     exe = os.path.join(wd, "nw.exe")
@@ -109,6 +114,7 @@ def start_aw_watchdog(wd):
             print(f"Error: Failed to start AW Watchdog: {e}")
     else:
         print(f"Error: '{exe}' does not exist. AW Watchdog executable is missing.")
+
 
 def main():
     if not os.path.exists(SRC_DIR):

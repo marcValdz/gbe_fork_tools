@@ -1,5 +1,6 @@
-# depots.py
+# dlc.py
 import time
+from typing import Dict
 
 
 def parse_branches(branches: dict) -> list:
@@ -31,12 +32,17 @@ def parse_branches(branches: dict) -> list:
     return ret
 
 
-def get_depots_infos(raw_infos):
+def get_depots_infos(SKIP_DLC: bool, raw_infos: Dict):
     try:
         dlc_list = set()
         depot_app_list = set()
         all_depots = set()
         all_branches = []
+        
+        if SKIP_DLC:
+            print("Skipping DLCs...")
+            return (set(), set(), set(), [])
+        
         try:
             dlc_list = set(map(lambda a: int(str(a).strip()), raw_infos["extended"]["listofdlc"].split(",")))
         except Exception:
