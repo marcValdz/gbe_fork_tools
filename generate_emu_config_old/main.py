@@ -14,13 +14,12 @@ from steam.webauth import WebAuth
 from steam.enums.common import EResult
 
 # Import modules
-from utils import get_exe_dir, merge_dict, write_ini_file
+from utils import get_exe_dir, merge_dict, write_ini_file, create_safe_name
 from controller_config_generator import parse_controller_vdf
 
 from external_components.top_owners import TOP_OWNER_IDS
 from external_components.app_details import download_app_details
-from external_components import app_images, safe_name
-from external_components import ach_watcher_gen, cdx_gen, cold_client_gen
+from external_components import app_images, ach_watcher_gen, cdx_gen, cold_client_gen
 
 from args.regen import get_appids_from_output_dir
 from args.name import get_app_name

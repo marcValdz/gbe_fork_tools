@@ -1,6 +1,6 @@
 import re
 from typing import Dict, Tuple
-from external_components import safe_name
+from utils import create_safe_name
 
 
 def get_app_name(flag: bool, appid: int, game_info_common: Dict) -> Tuple[str, str]:
