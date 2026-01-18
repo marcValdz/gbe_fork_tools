@@ -115,4 +115,4 @@ def generate_achievement_stats(client, game_id: int, output_directory, backup_di
             shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_locked.jpg"), achievement_images_dir)
         download_achievement_images(game_id, images_to_download, achievement_images_dir)
 
-    return achievements
+    return achievements, stats

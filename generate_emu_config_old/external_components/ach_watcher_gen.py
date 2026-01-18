@@ -3,6 +3,7 @@ import json
 import requests
 from typing import Union, List, Dict, Set
 
+
 def __ClosestDictKey(targetKey: str, srcDict: Union[Dict, Set]) -> Union[str, None]:
     target_lower = targetKey.lower()
     for k in srcDict:
