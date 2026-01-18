@@ -22,7 +22,7 @@ from external_components.app_details import download_app_details
 from external_components import app_images, ach_watcher_gen, cdx_gen, cold_client_gen
 
 from args.regen import get_appids_from_output_dir
-from args.name import get_app_name
+from args.name import get_app_name, normalize_output_folder
 from args.dlc import get_depots_infos
 from args.achievements import generate_achievement_stats
 from args.inventory import generate_inventory
@@ -221,14 +221,16 @@ def main():
         game_info_common = game_info.get("common", {})
         
         app_name, app_name_on_disk = get_app_name(args.name, appid, game_info_common)
-        root_backup_dir = os.path.join(get_exe_dir(args.reldir), "backup")
-        backup_dir = os.path.join(root_backup_dir, f"{appid}")
-        os.makedirs(backup_dir, exist_ok=True)
-
         root_out_dir = "output"
+        normalize_output_folder(root_out_dir, appid, app_name_on_disk)
+        
         base_out_dir = os.path.join(root_out_dir, app_name_on_disk)
         emu_settings_dir = os.path.join(base_out_dir, "steam_settings")
         info_out_dir = os.path.join(base_out_dir, "info")
+        
+        root_backup_dir = os.path.join(get_exe_dir(args.reldir), "backup")
+        backup_dir = os.path.join(root_backup_dir, f"{appid}")
+        os.makedirs(backup_dir, exist_ok=True)
 
         if args.clean:
             print("Cleaning output folder before generating data")
