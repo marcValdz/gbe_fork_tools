@@ -27,6 +27,7 @@ from args.dlc import get_depots_infos
 from args.achievements import generate_achievement_stats
 from args.inventory import generate_inventory
 from args.controller import download_published_file
+from args.cloud_dirs import parse_cloud_dirs, get_ufs_dirs
 from args.config import EXTRA_FEATURES_DISABLE, EXTRA_FEATURES_CONVENIENT
 
 def main():
@@ -77,6 +78,7 @@ def main():
     parser.add_argument("-skip_ach", action="store_true", help="Skip achievements and Achievement Watcher schema generation")
     parser.add_argument("-skip_con", action="store_true", help="Skip controller configuration generation")
     parser.add_argument("-skip_inv", action="store_true", help="Skip inventory data generation")
+    parser.add_argument("-skip_cld", action="store_true", help="Skip parsing directories for cloud saves")
 
     # Output / generation
     parser.add_argument("-name", action="store_true", help="Save output in a folder named after the app")
@@ -396,6 +398,29 @@ def main():
                 base_out_dir,
                 appid,
                 game_info_common)
+
+        if not args.skip_cld:
+            (save_files, save_file_overrides) = parse_cloud_dirs(game_info)
+
+            win_cloud_dirs = get_ufs_dirs("Windows", save_files, save_file_overrides)
+            for idx in range(len(win_cloud_dirs)):
+                merge_dict(out_config_app_ini, {
+                    'configs.app.ini': {
+                        'app::cloud_save::win': {
+                            f"dir{idx + 1}": (win_cloud_dirs[idx], ''),
+                        }
+                    }
+                })
+
+            linux_cloud_dirs = get_ufs_dirs("Linux", save_files, save_file_overrides)
+            for idx in range(len(linux_cloud_dirs)):
+                merge_dict(out_config_app_ini, {
+                    'configs.app.ini': {
+                        'app::cloud_save::linux': {
+                            f"dir{idx + 1}": (linux_cloud_dirs[idx], ''),
+                        }
+                    }
+                })
 
         if args.de:
             merge_dict(out_config_app_ini, EXTRA_FEATURES_DISABLE)
