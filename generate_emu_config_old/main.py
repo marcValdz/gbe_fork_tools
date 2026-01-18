@@ -108,6 +108,13 @@ def main():
             parser.print_help()
         sys.exit(1)
 
+    USERNAME = ""
+    PASSWORD = ""
+    
+    # Currently, it's not possible to generate achievement/stat information (schema and .json) with an anonymous login.
+    # It's theoretically possible to fetch this information with an API key using the steam web API pathway instead.
+    if (args.anon): args.skip_ach = True
+
     client = SteamClient()
     if args.anon:
         result = client.anonymous_login()
@@ -256,12 +263,15 @@ def main():
             args.vid)
 
         achievements = []
+        stats = []
         languages = []
         app_exe = ''
 
         if game_info_common:
             if not args.skip_ach:
-                achievements = generate_achievement_stats(client, appid, emu_settings_dir, backup_dir, TOP_OWNER_IDS)
+                # The stats information can be returned from this function, but we can't really use it anywhere else at the moment.
+                # Unlike achievements which is later passed into the achievement watcher schema generation function.
+                achievements, stats = generate_achievement_stats(client, appid, emu_settings_dir, backup_dir, TOP_OWNER_IDS)
             if "supported_languages" in game_info_common:
                 langs = game_info_common["supported_languages"]
                 for lang in langs:
