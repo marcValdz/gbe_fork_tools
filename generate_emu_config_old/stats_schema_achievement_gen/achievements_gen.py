@@ -19,53 +19,60 @@ def generate_stats_achievements(
     achievements_out : list[dict] = []
     stats_out : list[dict] = []
 
-    for appid in schema:
-        sch = schema[appid]
-        stat_info = sch['stats']
-        for s in stat_info:
-            stat = stat_info[s]
-            if stat['type'] == STAT_TYPE_BITS:
+    for appid, sch in schema.items():
+        stat_info = sch.get('stats', {})
+        for _, stat in stat_info.items():
+
+            if 'bits' in stat:
                 achs = stat['bits']
-                for ach_num in achs:
-                    out = {}
-                    ach = achs[ach_num]
-                    out['hidden'] = 0
-                    for x in ach['display']:
-                        value = ach['display'][x]
-                        if f'{x}'.lower() == 'name':
-                            x = 'displayName'
-                        elif f'{x}'.lower() == 'desc':
-                            x = 'description'
-                        elif x == 'Hidden' or f'{x}'.lower() == 'hidden':
-                            x = 'hidden'
+                for _, ach in achs.items():
+                    out = {'hidden': 0}
+
+                    for x, value in ach.get('display', {}).items():
+                        k = x.lower()
+                        if k == 'name':
+                            out['displayName'] = value
+                        elif k == 'desc':
+                            out['description'] = value
+                        elif k == 'hidden':
                             try:
-                                value = int(value)
+                                out['hidden'] = int(value)
                             except Exception as e:
                                 pass
-                        out[x] = value
+                        else:
+                            out[x] = value
+
                     out['name'] = ach['name']
                     if 'progress' in ach:
                         out['progress'] = ach['progress']
-                    achievements_out += [out]
-            else:
+
+                    achievements_out.append(out)
+
+            elif 'name' in stat:
                 out = {}
                 out['default'] = '0'
                 out['global'] = '0'
                 out['name'] = stat['name']
+
                 if 'min' in stat:
                     out['min'] = stat['min']
-                if stat['type'] == STAT_TYPE_INT:
+
+                stat_type = stat.get('type')
+                if stat_type == STAT_TYPE_INT:
                     out['type'] = 'int'
-                elif stat['type'] == STAT_TYPE_FLOAT:
+                elif stat_type == STAT_TYPE_FLOAT:
                     out['type'] = 'float'
-                elif stat['type'] == STAT_TYPE_AVGRATE:
+                elif stat_type == STAT_TYPE_AVGRATE:
                     out['type'] = 'avgrate'
+                else:
+                    continue
+
                 if 'Default' in stat:
                     out['default'] = stat['Default']
                 elif 'default' in stat:
                     out['default'] = stat['default']
 
-                stats_out += [out]
+                stats_out.append(out)
             #print(stat_info[s])
 
     copy_default_unlocked_img = False
