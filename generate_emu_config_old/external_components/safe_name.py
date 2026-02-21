@@ -17,6 +17,6 @@ def create_safe_name(app_name : str):
         .rstrip()\
         .rstrip('.')\
         .replace('\t', ' ')
-    safe_name = re.sub('\s\s+', ' ', safe_name)
+    safe_name = re.sub(r'\s\s+', ' ', safe_name)
     return safe_name
 

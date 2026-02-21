@@ -46,6 +46,10 @@ def generate_stats_achievements(
                     out['name'] = ach['name']
                     if 'progress' in ach:
                         out['progress'] = ach['progress']
+                        if 'min_val' in out['progress']:
+                            out['progress']['min_val'] = str(out['progress']['min_val'])
+                        if 'max_val' in out['progress']:
+                            out['progress']['max_val'] = str(out['progress']['max_val'])
                     achievements_out += [out]
             else:
                 out = {}
