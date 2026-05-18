@@ -277,8 +277,8 @@ def main():
         normalize_output_folder(root_out_dir, appid, app_name_on_disk)
 
         base_out_dir = os.path.join(root_out_dir, app_name_on_disk)
-        emu_settings_dir = os.path.join(base_out_dir, "steam_settings")
-        info_out_dir = os.path.join(base_out_dir, "info")
+        emu_settings_dir = os.path.join(base_out_dir, "gse", "steam_settings")
+        info_out_dir = os.path.join(base_out_dir, "gse", "extra_info")
 
         if args.clean:
             print("Cleaning output folder before generating data")
