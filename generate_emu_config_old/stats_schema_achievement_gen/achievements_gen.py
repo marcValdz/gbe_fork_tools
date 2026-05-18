@@ -27,9 +27,9 @@ def generate_stats_achievements(
             if stat['type'] == STAT_TYPE_BITS or stat['type'] == 'ACHIEVEMENTS':
                 achs = stat['bits']
                 for ach_num in achs:
-                    out = {}
+                    raw = {}
                     ach = achs[ach_num]
-                    out['hidden'] = 0
+                    raw['hidden'] = 0
                     for x in ach['display']:
                         value = ach['display'][x]
                         if f'{x}'.lower() == 'name':
@@ -44,21 +44,36 @@ def generate_stats_achievements(
                                 value = {k: str(v) for k, v in value.items()}
                             else:
                                 value = str(value)
-                        elif x == 'Hidden' or f'{x}'.lower() == 'hidden':
+                        elif f'{x}'.lower() == 'hidden':
                             x = 'hidden'
                             try:
                                 value = int(value)
-                            except Exception as e:
+                            except Exception:
                                 pass
-                        out[x] = value
-                    out['name'] = ach['name']
+                        raw[x] = value
+
+                    out = {
+                        'name':        ach['name'],
+                        'displayName': raw.get('displayName', ''),
+                        'description': raw.get('description', ''),
+                        'hidden':      raw.get('hidden', 0),
+                        'icon':        raw.get('icon', ''),
+                        'icon_gray':   raw.get('icon_gray', ''),
+                    }
+
+                    skip = {'name', 'displayName', 'description', 'hidden', 'icon', 'icon_gray'}
+                    for k, v in raw.items():
+                        if k not in skip:
+                            out[k] = v
+
                     if 'progress' in ach:
                         out['progress'] = ach['progress']
                         if 'min_val' in out['progress']:
                             out['progress']['min_val'] = str(out['progress']['min_val'])
                         if 'max_val' in out['progress']:
                             out['progress']['max_val'] = str(out['progress']['max_val'])
-                    achievements_out += [out]
+
+                    achievements_out.append(out)
             else:
                 out = {}
                 out['default'] = '0'
@@ -102,7 +117,7 @@ def generate_stats_achievements(
         if icongray:
             out_ach["icongray"] = f"{icongray}"
 
-    output_stats : list[str] = []
+    output_stats : list[dict] = []
     for s in stats_out:
         default_num = 0
         global_num = 0
