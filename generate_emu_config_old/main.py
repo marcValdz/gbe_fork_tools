@@ -86,8 +86,15 @@ def main():
     parser.add_argument("-de", action="store_true", help="Disable extra features")
     parser.add_argument("-cve", action="store_true", help="Enable convenient extra features")
     parser.add_argument("-cdx", action="store_true", help="Generate CODEX and ColdClient Steam emu .ini files")
+    parser.add_argument("-offline", "--offline", action="store_true", help="Use cached backup files instead of downloading data from Steam or the web")
 
     args = parser.parse_args()
+
+    # Ensure offline mode does not attempt web downloads
+    if args.offline:
+        if any([args.shots, args.thumbs, args.vid, args.imgs]):
+            print("Offline mode: screenshot, thumbnail, video and image downloads are disabled.")
+        args.shots = args.thumbs = args.vid = args.imgs = False
 
     # Start with explicitly provided appids
     appids = set(args.appids)
@@ -112,16 +119,21 @@ def main():
     if args.anon:
         args.skip_ach = True
 
-    client = SteamClient()
-    if args.anon:
-        result = client.anonymous_login()
-        trials = 5
-        while result != EResult.OK and trials > 0:
-            time.sleep(1)
-            result = client.anonymous_login()
-            trials -= 1
+    client = None
+    my_login_file = ""
+    if args.offline:
+        print("Offline mode: using cached backup files only")
     else:
-        my_login_file = os.path.join(get_exe_dir(args.reldir), "my_login.txt")
+        client = SteamClient()
+        if args.anon:
+            result = client.anonymous_login()
+            trials = 5
+            while result != EResult.OK and trials > 0:
+                time.sleep(1)
+                result = client.anonymous_login()
+                trials -= 1
+        else:
+            my_login_file = os.path.join(get_exe_dir(args.reldir), "my_login.txt")
         if os.path.isfile(my_login_file):
             with open(my_login_file, "r", encoding="utf-8") as f:
                 filedata = [line.strip() for line in f if line.strip()]
@@ -204,6 +216,9 @@ def main():
                 refresh_tokens.update({USERNAME: AUTH_TOKEN})
                 json.dump(refresh_tokens, f, indent=4)
 
+    if not args.offline:
+        assert client is not None
+
     # Prepend additional owner IDs from file if available
     top_owners_file = os.path.join(get_exe_dir(args.reldir), "top_owners_ids.txt")
     if os.path.isfile(top_owners_file):
@@ -212,30 +227,42 @@ def main():
         all_ids = list(map(int, filedata))
         TOP_OWNER_IDS[:0] = all_ids
 
-    if not args.anon:
+    if not args.anon and not args.offline and client is not None:
         TOP_OWNER_IDS.insert(0, client.steam_id.as_64)
 
     for appid in appids:
         out_config_app_ini = {}
         print(f"********* Generating info for app id {appid} *********")
-        raw = client.get_product_info(apps=[appid])
-        if not raw or "apps" not in raw or appid not in raw["apps"]:
-            print(f"Error: Could not fetch product info for appid {appid}. Skipping.")
-            continue
-        game_info = raw["apps"][appid]
+
+        root_out_dir = "output"
+        root_backup_dir = os.path.join(get_exe_dir(args.reldir), "backup")
+        backup_dir = os.path.join(root_backup_dir, f"{appid}")
+        os.makedirs(backup_dir, exist_ok=True)
+
+        if args.offline:
+            backup_product_info_file = os.path.join(backup_dir, "product_info.json")
+            if os.path.isfile(backup_product_info_file):
+                with open(backup_product_info_file, "r", encoding="utf-8") as f:
+                    game_info = json.load(f)
+            else:
+                print(f"Offline mode: missing backup product_info.json for appid {appid}. Skipping.")
+                continue
+        else:
+            assert client is not None
+            raw = client.get_product_info(apps=[appid])
+            if not raw or "apps" not in raw or appid not in raw["apps"]:
+                print(f"Error: Could not fetch product info for appid {appid}. Skipping.")
+                continue
+            game_info = raw["apps"][appid]
+
         game_info_common = game_info.get("common", {})
 
         app_name, app_name_on_disk = get_app_name(args.name, appid, game_info_common)
-        root_out_dir = "output"
         normalize_output_folder(root_out_dir, appid, app_name_on_disk)
 
         base_out_dir = os.path.join(root_out_dir, app_name_on_disk)
         emu_settings_dir = os.path.join(base_out_dir, "steam_settings")
         info_out_dir = os.path.join(base_out_dir, "info")
-
-        root_backup_dir = os.path.join(get_exe_dir(args.reldir), "backup")
-        backup_dir = os.path.join(root_backup_dir, f"{appid}")
-        os.makedirs(backup_dir, exist_ok=True)
 
         if args.clean:
             print("Cleaning output folder before generating data")
@@ -248,10 +275,24 @@ def main():
         os.makedirs(info_out_dir, exist_ok=True)
 
         print(f"Output dir: '{base_out_dir}'")
-        with open(os.path.join(info_out_dir, "product_info.json"), "w", encoding="utf-8") as f:
-            json.dump(game_info, f, ensure_ascii=False, indent=2)
+        if args.offline:
+            shutil.copy2(os.path.join(backup_dir, "product_info.json"), os.path.join(info_out_dir, "product_info.json"))
+        else:
+            with open(os.path.join(info_out_dir, "product_info.json"), "w", encoding="utf-8") as f:
+                json.dump(game_info, f, ensure_ascii=False, indent=2)
 
-        app_details = download_app_details(base_out_dir, info_out_dir, appid, args.shots, args.thumbs, args.vid)
+        if args.offline:
+            app_details = {}
+            cached_app_details_file = os.path.join(backup_dir, "app_details.json")
+            if os.path.isfile(cached_app_details_file):
+                with open(cached_app_details_file, "r", encoding="utf-8") as f:
+                    app_details = json.load(f)
+                print(f"Offline mode: loaded cached app details from {cached_app_details_file}")
+                shutil.copy2(cached_app_details_file, os.path.join(info_out_dir, "app_details.json"))
+            else:
+                print(f"Offline mode: missing cached app_details.json for appid {appid}")
+        else:
+            app_details = download_app_details(base_out_dir, info_out_dir, backup_dir, appid, args.shots, args.thumbs, args.vid)
 
         achievements = []
         stats = []
@@ -262,7 +303,14 @@ def main():
             if not args.skip_ach:
                 # The stats information can be returned from this function, but we can't really use it anywhere else at the moment.
                 # Unlike achievements which is later passed into the achievement watcher schema generation function.
-                achievements, stats = generate_achievement_stats(client, appid, emu_settings_dir, backup_dir, TOP_OWNER_IDS)
+                achievements, stats = generate_achievement_stats(
+                    client,
+                    appid,
+                    emu_settings_dir,
+                    backup_dir,
+                    TOP_OWNER_IDS,
+                    args.offline,
+                )
             if "supported_languages" in game_info_common:
                 langs = game_info_common["supported_languages"]
                 for lang in langs:
@@ -280,9 +328,18 @@ def main():
         dlc_list, _, all_depots, all_branches = get_depots_infos(args.skip_dlc, game_info)
         dlc_raw = {}
         if dlc_list:
-            dlc_product_info = client.get_product_info(apps=dlc_list)
-            if dlc_product_info and "apps" in dlc_product_info:
-                dlc_raw = dlc_product_info["apps"]
+            if args.offline:
+                dlc_backup_file = os.path.join(backup_dir, "dlc_product_info.json")
+                if os.path.isfile(dlc_backup_file):
+                    with open(dlc_backup_file, "r", encoding="utf-8") as f:
+                        dlc_raw = json.load(f)
+                else:
+                    print(f"Offline mode: missing cached DLC product info for appid {appid}, DLC names will be generic.")
+            else:
+                assert client is not None
+                dlc_product_info = client.get_product_info(apps=dlc_list)
+                if dlc_product_info and "apps" in dlc_product_info:
+                    dlc_raw = dlc_product_info["apps"]
             for dlc in dlc_raw:
                 try:
                     dlc_name = dlc_raw[dlc]["common"].get("name", "")
@@ -329,7 +386,20 @@ def main():
 
         config_generated = False
         if "config" in game_info:
-            if not args.skip_con and "steamcontrollerconfigdetails" in game_info["config"]:
+            if not args.skip_con and args.offline:
+                print("Offline mode: scanning backup for cached controller VDF files")
+                for entry in os.listdir(backup_dir):
+                    if entry.lower().endswith(".vdf"):
+                        cached_vdf_path = os.path.join(backup_dir, entry)
+                        try:
+                            with open(cached_vdf_path, "rb") as f:
+                                vdf_content = f.read().decode("utf-8", errors="replace")
+                            parse_controller_vdf.generate_controller_config(vdf_content, os.path.join(emu_settings_dir, "controller"))
+                            config_generated = True
+                            print(f"Parsed cached controller config '{entry}'")
+                        except Exception as e:
+                            print(f"Error parsing cached controller config '{entry}': {e}")
+            elif not args.skip_con and "steamcontrollerconfigdetails" in game_info["config"]:
                 controller_details = game_info["config"]["steamcontrollerconfigdetails"]
                 print("Downloading controller vdf files")
                 for id in controller_details:
@@ -343,7 +413,7 @@ def main():
                             print("Controller type supported")
                             parse_controller_vdf.generate_controller_config(out_vdf.decode("utf-8"), os.path.join(emu_settings_dir, "controller"))
                             config_generated = True
-            if not args.skip_con and "steamcontrollertouchconfigdetails" in game_info["config"]:
+            if not args.skip_con and not args.offline and "steamcontrollertouchconfigdetails" in game_info["config"]:
                 controller_details = game_info["config"]["steamcontrollertouchconfigdetails"]
                 for id in controller_details:
                     details = controller_details[id]
@@ -382,12 +452,17 @@ def main():
             ach_watcher_gen.generate_all_ach_watcher_schemas(base_out_dir, appid, app_name, app_exe, achievements, app_details, game_info_common)
 
         if args.cdx:
-            user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
-            username = client.user.name or "Player"  # type: ignore
+            if args.offline:
+                user_id3 = "0"
+                username = "Player"
+            else:
+                assert client is not None
+                user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
+                username = client.user.name or "Player"  # type: ignore
             cdx_gen.generate_cdx_ini(base_out_dir, appid, user_id3, username, dlc_config_list, achievements)
             cold_client_gen.generate_cold_client_ini(base_out_dir, appid, app_exe)
 
-        if args.imgs:
+        if args.imgs and not args.offline:
             app_images.download_app_images(base_out_dir, appid, game_info_common)
 
         if not args.skip_cld:
@@ -428,7 +503,16 @@ def main():
 
         inventory_data = None
         if not args.skip_inv:
-            inventory_data = generate_inventory(client, appid)
+            if args.offline:
+                inventory_backup_file = os.path.join(backup_dir, "inventory.json")
+                if os.path.isfile(inventory_backup_file):
+                    with open(inventory_backup_file, "rb") as f:
+                        inventory_data = f.read()
+                    print(f"Offline mode: loaded cached inventory from {inventory_backup_file}")
+                else:
+                    print(f"Offline mode: missing cached inventory.json for appid {appid}, skipping inventory generation")
+            else:
+                inventory_data = generate_inventory(client, appid)
         if inventory_data is not None:
             out_inventory = {}
             default_items = {}
@@ -452,10 +536,11 @@ def main():
             with open(os.path.join(emu_settings_dir, "default_items.json"), "w", encoding="utf-8") as f:
                 json.dump(default_items, f, ensure_ascii=False, indent=2)
 
-        with open(os.path.join(backup_dir, "product_info.json"), "w", encoding="utf-8") as f:
-            json.dump(game_info, f, ensure_ascii=False, indent=2)
-        with open(os.path.join(backup_dir, "dlc_product_info.json"), "w", encoding="utf-8") as f:
-            json.dump(dlc_raw, f, ensure_ascii=False, indent=2)
+        if not args.offline:
+            with open(os.path.join(backup_dir, "product_info.json"), "w", encoding="utf-8") as f:
+                json.dump(game_info, f, ensure_ascii=False, indent=2)
+            with open(os.path.join(backup_dir, "dlc_product_info.json"), "w", encoding="utf-8") as f:
+                json.dump(dlc_raw, f, ensure_ascii=False, indent=2)
 
         print(f"######### Done for app id {appid} #########\n\n")
 

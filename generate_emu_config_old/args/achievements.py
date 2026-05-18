@@ -1,11 +1,11 @@
 # achievements.py
 import os
-import time
 import threading
 import queue
 import requests
 import sys
 import traceback
+from types import SimpleNamespace
 from steam.core.msg import MsgProto
 from steam.enums.emsg import EMsg
 from stats_schema_achievement_gen import achievements_gen
@@ -13,10 +13,10 @@ from stats_schema_achievement_gen import achievements_gen
 
 def get_stats_schema(client, game_id, owner_id):
     message = MsgProto(EMsg.ClientGetUserStats)
-    message.body.game_id = game_id
-    message.body.schema_local_version = -1
-    message.body.crc_stats = 0
-    message.body.steam_id_for_user = owner_id
+    message.body.game_id = game_id  # type: ignore[attr-defined]
+    message.body.schema_local_version = -1  # type: ignore[attr-defined]
+    message.body.crc_stats = 0  # type: ignore[attr-defined]
+    message.body.steam_id_for_user = owner_id  # type: ignore[attr-defined]
 
     client.send(message)
     return client.wait_msg(EMsg.ClientGetUserStatsResponse, timeout=5)
@@ -66,20 +66,31 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
     print("Finished downloading achievement images")
 
 
-def generate_achievement_stats(client, game_id: int, output_directory, backup_directory, top_owner_ids) -> list:
+def generate_achievement_stats(client, game_id: int, output_directory, backup_directory, top_owner_ids, offline: bool = False) -> tuple[list[dict], list[dict]]:
     stats_schema_found = None
-    print("Finding achievement stats...")
-    for owner_id in top_owner_ids:
-        print(f"Trying account ID {owner_id} for achievement stats...")
-        out = get_stats_schema(client, game_id, owner_id)
-        if out is not None and len(out.body.schema) > 0:
-            stats_schema_found = out
-            print(f"Found achievement stats using account ID {owner_id}!")
-            break
+    if offline:
+        schema_path = os.path.join(backup_directory, f"UserGameStatsSchema_{game_id}.bin")
+        if os.path.isfile(schema_path):
+            print(f"Offline mode: loading cached achievement schema from {schema_path}")
+            with open(schema_path, "rb") as f:
+                schema_bytes = f.read()
+            stats_schema_found = SimpleNamespace(body=SimpleNamespace(schema=schema_bytes))
+        else:
+            print(f"Offline mode: missing cached achievement schema for appid {game_id}")
+            return ([], [])
+    else:
+        print("Finding achievement stats...")
+        for owner_id in top_owner_ids:
+            print(f"Trying account ID {owner_id} for achievement stats...")
+            out = get_stats_schema(client, game_id, owner_id)
+            if out is not None and len(out.body.schema) > 0:
+                stats_schema_found = out
+                print(f"Found achievement stats using account ID {owner_id}!")
+                break
 
     if stats_schema_found is None:
         print(f"[X] App id {game_id} has no achievements")
-        return []
+        return ([], [])
 
     achievement_images_dir = os.path.join(output_directory, "img")
     images_to_download = set()
@@ -99,18 +110,21 @@ def generate_achievement_stats(client, game_id: int, output_directory, backup_di
             images_to_download.add(icon_gray)
 
     if images_to_download:
-        if not os.path.exists(achievement_images_dir):
-            os.makedirs(achievement_images_dir)
-        if copy_default_unlocked_img:
-            import shutil
-            from utils import get_exe_dir
+        if offline:
+            print("Offline mode: skipping achievement image downloads")
+        else:
+            if not os.path.exists(achievement_images_dir):
+                os.makedirs(achievement_images_dir)
+            if copy_default_unlocked_img:
+                import shutil
+                from utils import get_exe_dir
 
-            shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_unlocked.jpg"), achievement_images_dir)
-        if copy_default_locked_img:
-            import shutil
-            from utils import get_exe_dir
+                shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_unlocked.jpg"), achievement_images_dir)
+            if copy_default_locked_img:
+                import shutil
+                from utils import get_exe_dir
 
-            shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_locked.jpg"), achievement_images_dir)
-        download_achievement_images(game_id, images_to_download, achievement_images_dir)
+                shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_locked.jpg"), achievement_images_dir)
+            download_achievement_images(game_id, images_to_download, achievement_images_dir)
 
     return achievements, stats

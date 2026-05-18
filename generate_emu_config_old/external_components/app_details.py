@@ -186,12 +186,14 @@ def __download_videos(base_out_dir: str, appid: int, app_details: dict):
 def download_app_details(
     base_out_dir: str,
     info_out_dir: str,
+    backup_dir: str,
     appid: int,
     download_screenshots: bool,
     download_thumbnails: bool,
     download_vids: bool,
 ):
     details_out_file = os.path.join(info_out_dir, "app_details.json")
+    backup_out_file = os.path.join(backup_dir, "app_details.json")
     print(f"downloading app details in: {details_out_file}")
 
     app_details: dict = {}
@@ -221,6 +223,9 @@ def download_app_details(
         return {}
 
     with open(details_out_file, "wt", encoding="utf-8") as f:
+        json.dump(app_details, f, ensure_ascii=False, indent=2)
+
+    with open(backup_out_file, "wt", encoding="utf-8") as f:
         json.dump(app_details, f, ensure_ascii=False, indent=2)
 
     __download_screenshots(base_out_dir, appid, app_details, download_screenshots, download_thumbnails)
