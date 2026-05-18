@@ -5,7 +5,6 @@ import shutil
 import psutil
 import subprocess
 import time
-from collections import defaultdict
 
 
 # Constants

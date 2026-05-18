@@ -49,7 +49,7 @@ def __download_screenshots(base_out_dir: str, appid: int, app_details: dict, dow
 
     screenshots: list[dict[str, object]] = app_details.get(f"{appid}", {}).get("data", {}).get("screenshots", [])
     if not screenshots:
-        print(f"[?] no screenshots or thumbnails are available")
+        print("[?] no screenshots or thumbnails are available")
         return
 
     screenshots_out_dir = os.path.join(base_out_dir, "screenshots")
@@ -76,7 +76,7 @@ def __download_screenshots(base_out_dir: str, appid: int, app_details: dict, dow
         if download_screenshots:
             full_image_url = scrn.get("path_full", None)
             if full_image_url:
-                full_image_url_sanitized = __remove_url_query(full_image_url)
+                full_image_url_sanitized = __remove_url_query(str(full_image_url))
                 image_hash_name = f"{full_image_url_sanitized.rsplit('/', 1)[-1]}".rstrip()
                 if image_hash_name:
                     q.put((full_image_url_sanitized, os.path.join(screenshots_out_dir, image_hash_name)))
@@ -86,7 +86,7 @@ def __download_screenshots(base_out_dir: str, appid: int, app_details: dict, dow
         if download_thumbnails:
             thumbnail_url = scrn.get("path_thumbnail", None)
             if thumbnail_url:
-                thumbnail_url_sanitized = __remove_url_query(thumbnail_url)
+                thumbnail_url_sanitized = __remove_url_query(str(thumbnail_url))
                 image_hash_name = f"{thumbnail_url_sanitized.rsplit('/', 1)[-1]}".rstrip()
                 if image_hash_name:
                     q.put((thumbnail_url_sanitized, os.path.join(thumbnails_out_dir, image_hash_name)))
@@ -96,47 +96,47 @@ def __download_screenshots(base_out_dir: str, appid: int, app_details: dict, dow
     q.join()
 
     for i in range(max_threads):
-        q.put((None, None))
+        q.put(("", ""))
 
     q.join()
 
-    print(f"finished downloading app screenshots")
+    print("finished downloading app screenshots")
 
 
 PREFERED_VIDS = ["trailer", "gameplay", "announcement"]
 
 
 def __download_videos(base_out_dir: str, appid: int, app_details: dict):
-    videos: list[dict[str, object]] = app_details.get(f"{appid}", {}).get("data", {}).get("movies", [])
+    videos: list[dict[str, dict]] = app_details.get(f"{appid}", {}).get("data", {}).get("movies", [])
     if not videos:
-        print(f"[?] no videos were found")
+        print("[?] no videos were found")
         return
 
     videos_out_dir = os.path.join(base_out_dir, "videos")
     print(f"downloading app videos in: {videos_out_dir}")
 
-    first_vid: tuple[str, str] = None
-    prefered_vid: tuple[str, str] = None
+    first_vid: tuple[str, str] = ("", "")
+    prefered_vid: tuple[str, str] = ("", "")
     for vid in videos:
         vid_name = f"{vid.get('name', '')}"
         webm_url = vid.get("webm", {}).get("480", None)
         mp4_url = vid.get("mp4", {}).get("480", None)
 
-        ext: str = None
-        prefered_url: str = None
+        ext: str
+        preferred_url: str
         if mp4_url:
-            prefered_url = mp4_url
+            preferred_url = mp4_url
             ext = "mp4"
         elif webm_url:
-            prefered_url = webm_url
+            preferred_url = webm_url
             ext = "webm"
         else:  # no url is found
             print(f'[X] no url is found for video "{vid_name}"')
             continue
 
-        vid_url_sanitized = __remove_url_query(prefered_url)
+        vid_url_sanitized = __remove_url_query(str(preferred_url))
         vid_name_in_url = f"{vid_url_sanitized.rsplit('/', 1)[-1]}".rstrip()
-        vid_name = safe_name.create_safe_name(vid_name)
+        vid_name = create_safe_name(vid_name)
         if vid_name:
             vid_name = f"{vid_name}.{ext}"
         else:
@@ -152,10 +152,10 @@ def __download_videos(base_out_dir: str, appid: int, app_details: dict):
             if prefered_vid:
                 break
         else:
-            print(f'[X] cannot download video from url: "{prefered_url}", failed to get vido name')
+            print(f'[X] cannot download video from url: "{preferred_url}", failed to get vido name')
 
     if not first_vid and not prefered_vid:
-        print(f"[X] no video url could be found")
+        print("[X] no video url could be found")
         return
     elif not prefered_vid:
         prefered_vid = first_vid
@@ -176,11 +176,11 @@ def __download_videos(base_out_dir: str, appid: int, app_details: dict):
     q.join()
 
     for i in range(max_threads):
-        q.put((None, None))
+        q.put(("", ""))
 
     q.join()
 
-    print(f"finished downloading app videos")
+    print("finished downloading app videos")
 
 
 def download_app_details(
@@ -194,13 +194,12 @@ def download_app_details(
     details_out_file = os.path.join(info_out_dir, "app_details.json")
     print(f"downloading app details in: {details_out_file}")
 
-    app_details: dict | None = None
+    app_details: dict = {}
     last_exception: Exception | str | None = None
-
     # try 3 times
-    for download_trial in range(3):
+    for _ in range(3):
         try:
-            r = requests.get(f"http://store.steampowered.com/api/appdetails?appids={appid}&format=json")
+            r = requests.get("http://store.steampowered.com/api/appdetails", params={"appids": appid, "format": "json"})
             if r.status_code == requests.codes.ok:
                 result: dict = r.json()
                 json_ok = result.get(str(appid), {}).get("success", False)
@@ -212,14 +211,14 @@ def download_app_details(
         except Exception as e:
             last_exception = e
 
-        time.sleep(0.1)
+        time.sleep(1)
 
     if not app_details:
         err = "[X] failed to download app details"
         if last_exception:
             err += f', last error: "{last_exception}"'
         print(err)
-        return None  # explicit for clarity
+        return {}
 
     with open(details_out_file, "wt", encoding="utf-8") as f:
         json.dump(app_details, f, ensure_ascii=False, indent=2)

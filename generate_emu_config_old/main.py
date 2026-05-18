@@ -14,7 +14,7 @@ from steam.webauth import WebAuth
 from steam.enums.common import EResult
 
 # Import modules
-from utils import get_exe_dir, merge_dict, write_ini_file, create_safe_name
+from utils import get_exe_dir, merge_dict, write_ini_file
 from controller_config_generator import parse_controller_vdf
 
 from external_components.top_owners import TOP_OWNER_IDS
@@ -141,11 +141,8 @@ def main():
         refresh_tokens = {}
         if os.path.isfile(REFRESH_TOKENS):
             with open(REFRESH_TOKENS) as f:
-                try:
-                    data = json.load(f)
-                    refresh_tokens = data if isinstance(data, dict) else {}
-                except:
-                    pass
+                data = json.load(f)
+                refresh_tokens = data if isinstance(data, dict) else {}
 
         if not USERNAME:
             users = {i: user for i, user in enumerate(refresh_tokens, 1)}
@@ -163,7 +160,7 @@ def main():
         if not USERNAME:
             USERNAME = input("Steam user: ")
 
-        REFRESH_TOKEN = refresh_tokens.get(USERNAME)
+        AUTH_TOKEN = refresh_tokens.get(USERNAME)
         webauth = WebAuth()
         result = None
         while result in (EResult.TryAnotherCM, EResult.ServiceUnavailable, EResult.InvalidPassword, None):
@@ -177,21 +174,21 @@ def main():
                 print("Invalid password or refresh_token. Correct the details or delete the refresh token file and try again.")
                 sys.exit(1)
 
-            if not REFRESH_TOKEN:
+            if not AUTH_TOKEN:
                 try:
                     webauth.cli_login(USERNAME, PASSWORD)
                 except Exception as e:
                     print(f"Error during login: {e}")
                     sys.exit(1)
                 USERNAME, PASSWORD = webauth.username, webauth.password
-                REFRESH_TOKEN = webauth.refresh_token
+                AUTH_TOKEN = webauth.refresh_token
 
-            result = client.login(USERNAME, PASSWORD, REFRESH_TOKEN)
+            result = client.login(USERNAME, PASSWORD, str(AUTH_TOKEN))
             print(f"Login result: {result}")
             print(f"Client connected after login: {client.connected}")
 
         if result != EResult.OK:
-            if REFRESH_TOKEN:
+            if AUTH_TOKEN:
                 print("Login failed, refresh token may be stale. Removing it. Please run the script again to re-authenticate.")
                 if USERNAME in refresh_tokens:
                     del refresh_tokens[USERNAME]
@@ -204,7 +201,7 @@ def main():
 
         if args.token:
             with open(REFRESH_TOKENS, "w") as f:
-                refresh_tokens.update({USERNAME: REFRESH_TOKEN})
+                refresh_tokens.update({USERNAME: AUTH_TOKEN})
                 json.dump(refresh_tokens, f, indent=4)
 
     # Prepend additional owner IDs from file if available
@@ -222,6 +219,9 @@ def main():
         out_config_app_ini = {}
         print(f"********* Generating info for app id {appid} *********")
         raw = client.get_product_info(apps=[appid])
+        if not raw or "apps" not in raw or appid not in raw["apps"]:
+            print(f"Error: Could not fetch product info for appid {appid}. Skipping.")
+            continue
         game_info = raw["apps"][appid]
         game_info_common = game_info.get("common", {})
 
@@ -277,10 +277,12 @@ def main():
             f.write(str(appid))
 
         dlc_config_list = []
-        dlc_list, depot_app_list, all_depots, all_branches = get_depots_infos(args.skip_dlc, game_info)
+        dlc_list, _, all_depots, all_branches = get_depots_infos(args.skip_dlc, game_info)
         dlc_raw = {}
         if dlc_list:
-            dlc_raw = client.get_product_info(apps=dlc_list)["apps"]
+            dlc_product_info = client.get_product_info(apps=dlc_list)
+            if dlc_product_info and "apps" in dlc_product_info:
+                dlc_raw = dlc_product_info["apps"]
             for dlc in dlc_raw:
                 try:
                     dlc_name = dlc_raw[dlc]["common"].get("name", "")
@@ -381,7 +383,7 @@ def main():
 
         if args.cdx:
             user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
-            username = client.user.name or "Player"
+            username = client.user.name or "Player"  # type: ignore
             cdx_gen.generate_cdx_ini(base_out_dir, appid, user_id3, username, dlc_config_list, achievements)
             cold_client_gen.generate_cold_client_ini(base_out_dir, appid, app_exe)
 

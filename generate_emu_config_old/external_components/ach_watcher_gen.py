@@ -1,6 +1,5 @@
 import os
 import json
-import requests
 from typing import Union, List, Dict, Set
 
 
@@ -76,9 +75,9 @@ def generate_all_ach_watcher_schemas(
     appid: int,
     app_name: str,
     app_exe: str,
-    achs: List[Dict],
-    app_details: Dict,  # Steam Store API
-    game_info_common: Dict,  # Steam Client API
+    achs: list[dict],
+    app_details: dict,  # Steam Store API
+    game_info_common: dict,  # Steam Client API
 ) -> None:
     FASTLY_BASE = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps"
     COMMUNITY_FASTLY = "https://shared.fastly.steamstatic.com/community_assets/images/apps"

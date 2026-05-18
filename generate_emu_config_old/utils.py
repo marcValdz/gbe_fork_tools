@@ -1,7 +1,6 @@
 # utils.py
 import os
 import sys
-import pathlib
 import re
 
 
