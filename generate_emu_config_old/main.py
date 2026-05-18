@@ -171,9 +171,8 @@ def main():
         result = None
         while result in (EResult.TryAnotherCM, EResult.ServiceUnavailable, EResult.InvalidPassword, None):
             if result in (EResult.TryAnotherCM, EResult.ServiceUnavailable):
-                if PROMPT_FOR_UNAVAILABLE and result == EResult.ServiceUnavailable:
+                if result == EResult.ServiceUnavailable:
                     answer = input("Steam is down. Keep retrying? [y/n]: ").lower()
-                    PROMPT_FOR_UNAVAILABLE = False
                     if answer.startswith('n'):
                         break
                 client.reconnect(maxdelay=15)
