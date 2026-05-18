@@ -216,6 +216,22 @@ def main():
                 refresh_tokens.update({USERNAME: AUTH_TOKEN})
                 json.dump(refresh_tokens, f, indent=4)
 
+        # Cache user data after successful login
+        if result == EResult.OK and not args.anon and client is not None and client.user is not None:
+            users_file = os.path.join(get_exe_dir(args.reldir), "users.json")
+            users_data = {}
+            if os.path.isfile(users_file):
+                try:
+                    with open(users_file, "r", encoding="utf-8") as f:
+                        users_data = json.load(f)
+                except Exception:
+                    users_data = {}
+            user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
+            users_data[user_id3] = client.user.name or "Player"
+            with open(users_file, "w", encoding="utf-8") as f:
+                json.dump(users_data, f, indent=4)
+            print(f"Cached user data: {user_id3} = {users_data[user_id3]}")
+
     if not args.offline:
         assert client is not None
 
@@ -455,10 +471,20 @@ def main():
             if args.offline:
                 user_id3 = "0"
                 username = "Player"
+                users_file = os.path.join(get_exe_dir(args.reldir), "users.json")
+                if os.path.isfile(users_file):
+                    try:
+                        with open(users_file, "r", encoding="utf-8") as f:
+                            users_data = json.load(f)
+                        if users_data:
+                            user_id3, username = next(iter(users_data.items()))
+                            print(f"Loaded user data from cache: {user_id3} = {username}")
+                    except Exception:
+                        print("Could not load cached user data, using defaults")
             else:
-                assert client is not None
+                assert client is not None and client.user is not None
                 user_id3 = client.steam_id.as_steam3.split(":")[2][:-1]
-                username = client.user.name or "Player"  # type: ignore
+                username = client.user.name or "Player"
             cdx_gen.generate_cdx_ini(base_out_dir, appid, user_id3, username, dlc_config_list, achievements)
             cold_client_gen.generate_cold_client_ini(base_out_dir, appid, app_exe)
 
