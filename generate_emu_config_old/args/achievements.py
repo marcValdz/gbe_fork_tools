@@ -34,10 +34,7 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
                 return
             succeeded = False
             # Updated CDN endpoints
-            for base_url in [
-                "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/",
-                "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/"
-            ]:
+            for base_url in ["https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/", "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/"]:
                 # If the image name is already a full URL, just use it directly
                 url = name if name.startswith("http") else f"{base_url}{game_id}/{name}"
                 try:
@@ -88,17 +85,16 @@ def generate_achievement_stats(client, game_id: int, output_directory, backup_di
     images_to_download = set()
 
     # Backup schema
-    with open(os.path.join(backup_directory, f'UserGameStatsSchema_{game_id}.bin'), 'wb') as f:
+    with open(os.path.join(backup_directory, f"UserGameStatsSchema_{game_id}.bin"), "wb") as f:
         f.write(stats_schema_found.body.schema)
 
-    achievements, stats, copy_default_unlocked_img, copy_default_locked_img = \
-        achievements_gen.generate_stats_achievements(stats_schema_found.body.schema, output_directory)
-    
+    achievements, stats, copy_default_unlocked_img, copy_default_locked_img = achievements_gen.generate_stats_achievements(stats_schema_found.body.schema, output_directory)
+
     for ach in achievements:
-        icon = str(ach.get('icon', '')).strip()
+        icon = str(ach.get("icon", "")).strip()
         if icon:
             images_to_download.add(icon)
-        icon_gray = str(ach.get('icon_gray', '')).strip()
+        icon_gray = str(ach.get("icon_gray", "")).strip()
         if icon_gray:
             images_to_download.add(icon_gray)
 
@@ -108,10 +104,12 @@ def generate_achievement_stats(client, game_id: int, output_directory, backup_di
         if copy_default_unlocked_img:
             import shutil
             from utils import get_exe_dir
+
             shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_unlocked.jpg"), achievement_images_dir)
         if copy_default_locked_img:
             import shutil
             from utils import get_exe_dir
+
             shutil.copy(os.path.join(get_exe_dir(), "steam_default_icon_locked.jpg"), achievement_images_dir)
         download_achievement_images(game_id, images_to_download, achievement_images_dir)
 

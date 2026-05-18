@@ -8,7 +8,7 @@ import re
 def get_exe_dir(relative=False):
     if relative:
         return os.path.curdir
-    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+    if getattr(sys, "frozen", False) and hasattr(sys, "_MEIPASS"):
         return os.path.dirname(sys.executable)
     else:
         return os.path.dirname(os.path.abspath(__file__))
@@ -25,25 +25,49 @@ def merge_dict(dest: dict, src: dict):
 def write_ini_file(base_path: str, out_ini: dict):
     for filename, sections in out_ini.items():
         file_path = os.path.join(base_path, filename)
-        with open(file_path, 'wt', encoding='utf-8') as f:
+        with open(file_path, "wt", encoding="utf-8") as f:
             for section, items in sections.items():
-                f.write(f'[{section}]\n')
+                f.write(f"[{section}]\n")
                 for key, (val, comment) in items.items():
                     if comment:
-                        f.write(f'# {comment}\n')
-                    f.write(f'{key}={val}\n')
-                f.write('\n')
+                        f.write(f"# {comment}\n")
+                    f.write(f"{key}={val}\n")
+                f.write("\n")
 
 
-ALLOWED_CHARS = set([
-    '`', '~', '!', '@', '#', '$', '%', '&', '(', ')', '-', '_', '=',
-    '+', '[', '{', ']', '}', ';', '\'', ',', '.', ' ', '\t', '®', '™',
-])
+ALLOWED_CHARS = set(
+    [
+        "`",
+        "~",
+        "!",
+        "@",
+        "#",
+        "$",
+        "%",
+        "&",
+        "(",
+        ")",
+        "-",
+        "_",
+        "=",
+        "+",
+        "[",
+        "{",
+        "]",
+        "}",
+        ";",
+        "'",
+        ",",
+        ".",
+        " ",
+        "\t",
+        "®",
+        "™",
+    ]
+)
 
-def create_safe_name(app_name : str):
-    safe_name = ''.join(c for c in f'{app_name}' if c.isalnum() or c in ALLOWED_CHARS)\
-        .rstrip()\
-        .rstrip('.')\
-        .replace('\t', ' ')
-    safe_name = re.sub(r'\s\s+', ' ', safe_name)
+
+def create_safe_name(app_name: str):
+    safe_name = "".join(c for c in f"{app_name}" if c.isalnum() or c in ALLOWED_CHARS).rstrip().rstrip(".").replace("\t", " ")
+    safe_name = re.sub(r"\s\s+", " ", safe_name)
     return safe_name

@@ -9,13 +9,13 @@ from collections import defaultdict
 
 
 # Constants
-SRC_DIR = os.path.join('.', 'output')
+SRC_DIR = os.path.join(".", "output")
 
-AW_PATH = os.path.join(os.environ.get('APPDATA', ''), 'Achievement Watcher')
-SCHEMA_REL_PATH = os.path.join('Achievement Watcher', 'steam_cache', 'schema')
+AW_PATH = os.path.join(os.environ.get("APPDATA", ""), "Achievement Watcher")
+SCHEMA_REL_PATH = os.path.join("Achievement Watcher", "steam_cache", "schema")
 
-AW_SCHEMA_DEST = os.path.join(AW_PATH, 'steam_cache', 'schema')
-AW_CFG_DEST = os.path.join(AW_PATH, 'cfg')
+AW_SCHEMA_DEST = os.path.join(AW_PATH, "steam_cache", "schema")
+AW_CFG_DEST = os.path.join(AW_PATH, "cfg")
 
 PROGRAM_FILES = os.environ.get("ProgramFiles", r"C:\Program Files")
 LOCAL_APPDATA = os.environ.get("LOCALAPPDATA", "")
@@ -86,7 +86,6 @@ def merge_schema_files(schema_dirs, dest):
 
     for schema_path in schema_dirs:
         for entry in os.scandir(schema_path):
-
             if entry.name.lower() == "gameindex.json":
                 continue
 
@@ -152,11 +151,7 @@ def main():
     json_paths, schema_dirs = scan_source(SRC_DIR)
     game_list = aggregate_game_indexes(json_paths)
     merge_schema_files(schema_dirs, AW_SCHEMA_DEST)
-    sorted_list = sorted(
-        game_list,
-        key=lambda x: x.get("appid", 0),
-        reverse=True
-    )
+    sorted_list = sorted(game_list, key=lambda x: x.get("appid", 0), reverse=True)
 
     schema_index_path = os.path.join(AW_SCHEMA_DEST, "gameIndex.json")
     cfg_index_path = os.path.join(AW_CFG_DEST, "gameIndex.json")

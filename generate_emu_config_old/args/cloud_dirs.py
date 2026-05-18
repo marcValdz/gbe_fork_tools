@@ -1,4 +1,3 @@
-
 class SaveFileModel:
     def __init__(self, root: str, path_after_root: str, platforms: set[str]):
         # the root dir of this save
@@ -11,10 +10,7 @@ class SaveFileModel:
 
 
 class SaveFileOverrideModel:
-    def __init__(self,
-            root_original: str, root_new: str, path_after_root_new: str,
-            platform: str, paths_to_transform: list[tuple[str, str]]
-        ):
+    def __init__(self, root_original: str, root_new: str, path_after_root_new: str, platform: str, paths_to_transform: list[tuple[str, str]]):
         # which original save file is this override targetting
         # any save file whose root matches this prop value should be considered
         # otherwise, the original save file is left without changes
@@ -28,6 +24,7 @@ class SaveFileOverrideModel:
         # the patterns in the original save file to replace
         self.paths_to_transform = paths_to_transform or []
 
+
 class Ufs:
     def __init__(self, save_files: list[SaveFileModel] = None, save_file_overrides: list[SaveFileOverrideModel] = None):
         self.save_files = save_files or []
@@ -38,7 +35,7 @@ def parse_cloud_dirs(game_info: dict[str, object]) -> tuple[list[SaveFileModel],
     save_files_raw: list[dict] = game_info.get("ufs", {}).get("savefiles", {}).values()
     if not save_files_raw:
         return ([], [])
-    
+
     save_files: list[SaveFileModel] = []
     for item in save_files_raw:
         root: str = item.get("root", "")
@@ -47,9 +44,7 @@ def parse_cloud_dirs(game_info: dict[str, object]) -> tuple[list[SaveFileModel],
 
         path: str = item.get("path", "")
         platforms: set[str] = set(item.get("platforms", {}).values())
-        save_files.append(SaveFileModel(
-            root=root, path_after_root=path, platforms=platforms
-        ))
+        save_files.append(SaveFileModel(root=root, path_after_root=path, platforms=platforms))
 
     root_overrides_raw: list[dict] = game_info.get("ufs", {}).get("rootoverrides", {}).values()
     root_overrides: list[SaveFileOverrideModel] = []
@@ -66,25 +61,15 @@ def parse_cloud_dirs(game_info: dict[str, object]) -> tuple[list[SaveFileModel],
             print(f"[?] UFS override for {root_original}@{platform} >> {root_new} has unknown OS comparison operation '{os_compare}'")
 
         path_after_root_new = item.get("addpath", "")
-        paths_to_transform: list[tuple[str, str]] = list(map(
-            lambda obj: (obj.get("find", ""), obj.get("replace", "")),
-            item.get("pathtransforms", {}).values()
-        ))
-        root_overrides.append(SaveFileOverrideModel(
-            root_original=root_original, root_new=root_new, path_after_root_new=path_after_root_new,
-            platform=platform, paths_to_transform=paths_to_transform
-        ))
-    
+        paths_to_transform: list[tuple[str, str]] = list(map(lambda obj: (obj.get("find", ""), obj.get("replace", "")), item.get("pathtransforms", {}).values()))
+        root_overrides.append(SaveFileOverrideModel(root_original=root_original, root_new=root_new, path_after_root_new=path_after_root_new, platform=platform, paths_to_transform=paths_to_transform))
+
     return (save_files, root_overrides)
 
 
-def get_ufs_dirs(
-        platform: str,
-        save_files: list[SaveFileModel],
-        save_file_overrides: list[SaveFileOverrideModel]
-    ) -> list[str]:
+def get_ufs_dirs(platform: str, save_files: list[SaveFileModel], save_file_overrides: list[SaveFileOverrideModel]) -> list[str]:
     # this is a path normalization/canonicalization function
-    # remove trailing '/' 
+    # remove trailing '/'
     # remove trailing "/." (pointing at current dir)
     # remove leading "/." (pointing at current dir)
     # remove any "/." in between
@@ -103,7 +88,7 @@ def get_ufs_dirs(
             fidx = path.find("/./")
             if fidx < 0:
                 break
-            path = path[:fidx] + path[fidx + 2:]
+            path = path[:fidx] + path[fidx + 2 :]
 
         if "." == path:
             return ""
@@ -111,26 +96,22 @@ def get_ufs_dirs(
         return path
 
     def fixup_vars(path: str) -> str:
-        return path.replace(
-                "{64BitSteamID}", "{::64BitSteamID::}"
-            ).replace(
-                "{Steam3AccountID}", "{::Steam3AccountID::}"
-            )
-    
+        return path.replace("{64BitSteamID}", "{::64BitSteamID::}").replace("{Steam3AccountID}", "{::Steam3AccountID::}")
+
     if not save_files:
         return []
-    
+
     # add base save files, only the ones matching the target platform
     ufs = Ufs()
     for item in save_files:
-        if not item.platforms: # all platforms
+        if not item.platforms:  # all platforms
             ufs.save_files.append(item)
         elif any(platfrom.upper() == "ALL" for platfrom in item.platforms):
             # appid 130 and appid 50 use "all"
             ufs.save_files.append(item)
         elif any(platfrom.upper() == platform.upper() for platfrom in item.platforms):
             ufs.save_files.append(item)
-    
+
     # add overrides, only the ones matching the target platform
     for item in save_file_overrides:
         if item.platform.upper() == platform.upper():
@@ -153,16 +134,13 @@ def get_ufs_dirs(
             path_after_root_new = sanitize_path(ufs_override.path_after_root_new.replace("\\", "/"))
             if path_after_root_new:
                 override_base_path += f"/{path_after_root_new}"
-            
-            save_files_to_override: list[SaveFileModel] = list(filter(
-                lambda save: save.root.upper() == ufs_override.root_original.upper(),
-                ufs.save_files
-            ))
+
+            save_files_to_override: list[SaveFileModel] = list(filter(lambda save: save.root.upper() == ufs_override.root_original.upper(), ufs.save_files))
             for save_file in save_files_to_override:
                 # don't sanitize "save_file.path_after_root" yet, we need to find and replace substrings
                 path_after_root_original = save_file.path_after_root.replace("\\", "/")
                 # replace all target ("find") patterns in the original path after root
-                for (find, replace) in ufs_override.paths_to_transform:
+                for find, replace in ufs_override.paths_to_transform:
                     find = find.replace("\\", "/")
                     replace = replace.replace("\\", "/")
                     if find and path_after_root_original:
@@ -173,25 +151,21 @@ def get_ufs_dirs(
                         # example: appid 2174720
                         path_after_root_original = replace
                     else:
-                        print(
-                            f"UFS override for {save_file.root}@{ufs_override.platform} >> {ufs_override.root_new} has empty 'find' string, " +
-                            f"or original UFS has empty 'path' string, ignoring"
-                        )
-                
+                        print(f"UFS override for {save_file.root}@{ufs_override.platform} >> {ufs_override.root_new} has empty 'find' string, " + f"or original UFS has empty 'path' string, ignoring")
+
                 path_after_root_original = sanitize_path(path_after_root_original)
                 new_path = override_base_path
                 if path_after_root_original:
                     new_path += f"/{path_after_root_original}"
-                
+
                 paths.add(fixup_vars(new_path))
-    else: # otherwise (no overrides) use all relevant UFS entries
+    else:  # otherwise (no overrides) use all relevant UFS entries
         for save_file in ufs.save_files:
             new_path = f"{{::{save_file.root.strip()}::}}"
             path_after_root = sanitize_path(save_file.path_after_root.replace("\\", "/"))
             if path_after_root:
                 new_path += f"/{path_after_root}"
-            
+
             paths.add(fixup_vars(new_path))
-    
 
     return list(paths)

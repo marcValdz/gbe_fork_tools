@@ -23,8 +23,8 @@ def normalize_output_folder(output_root, appid, desired_name):
         resolved = None
         if name.isdigit():
             resolved = int(name)
-        elif '-' in name:
-            tail = name.rsplit('-', 1)[-1]
+        elif "-" in name:
+            tail = name.rsplit("-", 1)[-1]
             if tail.isdigit():
                 resolved = int(tail)
 
@@ -59,9 +59,7 @@ def get_app_name(flag: bool, appid: int, game_info_common: Dict) -> Tuple[str, s
         print(f"App name on store: '{app_name}'")
         if flag:
             sanitized_name = create_safe_name(app_name)
-            app_name_on_disk = (
-                f"{sanitized_name}-{appid}" if sanitized_name else str(appid)
-            )
+            app_name_on_disk = f"{sanitized_name}-{appid}" if sanitized_name else str(appid)
     else:
         app_name = f"Unknown_Steam_app_{appid}"
         print("[X] Couldn't find app name on store")

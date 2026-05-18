@@ -13,7 +13,7 @@ def scrape_top_owner_ids():
     links = tree.xpath("//table/tbody/tr/td[2]/a/@href")
     user_ids = []
     for link in links:
-        parts = [s for s in link.split('/') if s]
+        parts = [s for s in link.split("/") if s]
         if parts:
             try:
                 user_id = int(parts[-1])

@@ -7,25 +7,28 @@ from steam.enums.common import EResult
 
 
 def _get_ugc_info(client, published_file_id):
-    return client.send_um_and_wait('PublishedFile.GetDetails#1', {
-        'publishedfileids': [published_file_id],
-        'includetags': False,
-        'includeadditionalpreviews': False,
-        'includechildren': False,
-        'includekvtags': False,
-        'includevotes': False,
-        'short_description': True,
-        'includeforsaledata': False,
-        'includemetadata': False,
-        'language': 0
-    })
+    return client.send_um_and_wait(
+        "PublishedFile.GetDetails#1",
+        {
+            "publishedfileids": [published_file_id],
+            "includetags": False,
+            "includeadditionalpreviews": False,
+            "includechildren": False,
+            "includekvtags": False,
+            "includevotes": False,
+            "short_description": True,
+            "includeforsaledata": False,
+            "includemetadata": False,
+            "language": 0,
+        },
+    )
 
 
 def download_published_file(client, published_file_id, backup_directory):
     try:
         from steam.protobufs import steammessages_publishedfile_pb2
     except ImportError:
-        print('[!] Missing steam.protobufs.steammessages_publishedfile_pb2. Some features (like controller configs) will be skipped.')
+        print("[!] Missing steam.protobufs.steammessages_publishedfile_pb2. Some features (like controller configs) will be skipped.")
         return None
 
     ugc_info = _get_ugc_info(client, published_file_id)

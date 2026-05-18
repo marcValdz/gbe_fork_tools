@@ -1,5 +1,6 @@
 import os
 
+
 def get_appids_from_output_dir():
     """Scan the output directory for subfolders and extract appids from their names."""
     output_dir = "output"
@@ -11,8 +12,8 @@ def get_appids_from_output_dir():
         if not os.path.isdir(path):
             continue
         # Try to extract appid from folder name
-        if '-' in name:
-            possible_appid = name.rsplit('-', 1)[-1]
+        if "-" in name:
+            possible_appid = name.rsplit("-", 1)[-1]
             if possible_appid.isdigit():
                 appids.add(int(possible_appid))
                 continue

@@ -13,7 +13,7 @@ def __ClosestDictKey(targetKey: str, srcDict: Union[Dict, Set]) -> Union[str, No
 
 
 def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> List[Dict]:
-    ACH_ICON_URL = f'https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/{app_id}'
+    ACH_ICON_URL = f"https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/{app_id}"
     out_achs_list = []
 
     for ach in achs:
@@ -41,9 +41,9 @@ def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> L
 
         # Icons
         icon_hash = ach.get("icon")
-        out_ach["icon"] = f'{ACH_ICON_URL}/{icon_hash}' if icon_hash else ""
+        out_ach["icon"] = f"{ACH_ICON_URL}/{icon_hash}" if icon_hash else ""
         icongray_hash = ach.get("icongray") or ach.get("icon_gray")
-        out_ach["icongray"] = f'{ACH_ICON_URL}/{icongray_hash}' if icongray_hash else ""
+        out_ach["icongray"] = f"{ACH_ICON_URL}/{icongray_hash}" if icongray_hash else ""
 
         # Copy remaining fields
         for k, v in ach.items():
@@ -58,8 +58,8 @@ def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> L
 def __build_fastly_url(base: str, appid: int, raw: str | None, filename: str) -> str | None:
     if raw is None:
         return None
-    if '/' in raw:
-        hash_prefix = raw.split('/')[0]
+    if "/" in raw:
+        hash_prefix = raw.split("/")[0]
         return f"{base}/{appid}/{hash_prefix}/{filename}"
     return f"{base}/{appid}/{filename}"
 
@@ -67,7 +67,7 @@ def __build_fastly_url(base: str, appid: int, raw: str | None, filename: str) ->
 def __build_portrait_url(base: str, appid: int, raw: str | None) -> str | None:
     if raw is None:
         return None
-    filename = raw.split('/')[1] if '/' in raw else raw
+    filename = raw.split("/")[1] if "/" in raw else raw
     return __build_fastly_url(base, appid, raw, filename)
 
 
@@ -77,10 +77,10 @@ def generate_all_ach_watcher_schemas(
     app_name: str,
     app_exe: str,
     achs: List[Dict],
-    app_details: Dict,          # Steam Store API
-    game_info_common: Dict,     # Steam Client API
+    app_details: Dict,  # Steam Store API
+    game_info_common: Dict,  # Steam Client API
 ) -> None:
-    FASTLY_BASE     = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps"
+    FASTLY_BASE = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps"
     COMMUNITY_FASTLY = "https://shared.fastly.steamstatic.com/community_assets/images/apps"
 
     ach_watcher_out_dir = os.path.join(base_out_dir, "Achievement Watcher", "steam_cache", "schema")
@@ -91,15 +91,11 @@ def generate_all_ach_watcher_schemas(
     icon_hash = game_info_common.get("icon")
     icon_url = f"{COMMUNITY_FASTLY}/{appid}/{icon_hash}.jpg" if icon_hash else None
 
-    app_data = app_details.get(f'{appid}', {}).get('data', {})
+    app_data = app_details.get(f"{appid}", {}).get("data", {})
     header_image = app_data.get("header_image") or None
-    background   = app_data.get("background") or None
+    background = app_data.get("background") or None
 
-    library_assets = (
-        game_info_common.get("library_assets_full")
-        or game_info_common.get("library_assets")
-        or {}
-    )
+    library_assets = game_info_common.get("library_assets_full") or game_info_common.get("library_assets") or {}
 
     # Detect languages
     langs: Set[str] = set()
@@ -139,11 +135,11 @@ def generate_all_ach_watcher_schemas(
                 "list": ach_list,
             },
             "img": {
-                "header":   header_image,
+                "header": header_image,
                 "background": background,
                 "portrait": portrait_url,
-                "hero":     hero_url,
-                "icon":     icon_url,
+                "hero": hero_url,
+                "icon": icon_url,
             },
             "apiVersion": 2,
         }
@@ -162,7 +158,7 @@ def generate_all_ach_watcher_schemas(
         "name": app_name,
         "binary": app_exe,
         "icon": icon_hash,
-    }    
+    }
     with open(
         os.path.join(ach_watcher_out_dir, "gameIndex.json"),
         "w",

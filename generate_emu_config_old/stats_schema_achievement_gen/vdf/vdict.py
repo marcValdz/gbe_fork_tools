@@ -2,21 +2,24 @@ import sys
 from collections import Counter
 
 if sys.version_info[0] >= 3:
-    _iter_values = 'values'
+    _iter_values = "values"
     _range = range
     _string_type = str
     import collections.abc as _c
+
     class _kView(_c.KeysView):
         def __iter__(self):
             return self._mapping.iterkeys()
+
     class _vView(_c.ValuesView):
         def __iter__(self):
             return self._mapping.itervalues()
+
     class _iView(_c.ItemsView):
         def __iter__(self):
             return self._mapping.iteritems()
 else:
-    _iter_values = 'itervalues'
+    _iter_values = "itervalues"
     _range = xrange
     _string_type = basestring
     _kView = lambda x: list(x.iterkeys())
@@ -184,13 +187,13 @@ class VDFDict(dict):
         return _iView(self)
 
     def get_all_for(self, key):
-        """ Returns all values of the given key """
+        """Returns all values of the given key"""
         if not isinstance(key, _string_type):
             raise TypeError("Key needs to be a string.")
         return [self[(idx, key)] for idx in _range(self.__kcount[key])]
 
     def remove_all_for(self, key):
-        """ Removes all items with the given key """
+        """Removes all items with the given key"""
         if not isinstance(key, _string_type):
             raise TypeError("Key need to be a string.")
 

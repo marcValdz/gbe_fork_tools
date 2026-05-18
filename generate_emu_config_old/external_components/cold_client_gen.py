@@ -1,6 +1,6 @@
 import os
 
-__cold_client_ini = '''
+__cold_client_ini = """
 # modified version of ColdClientLoader originally by Rat431
 [SteamClient]
 # path to game exe, absolute or relative to the loader
@@ -54,21 +54,15 @@ Mode=0
 # don't call `ResumeThread()` on the main thread after spawning the .exe
 ResumeByDebugger=0
 
-'''
+"""
 
 
-def generate_cold_client_ini(
-    base_out_dir: str,
-    appid: int,
-    app_exe: str) -> None:
+def generate_cold_client_ini(base_out_dir: str, appid: int, app_exe: str) -> None:
 
     cold_client_ini_path = os.path.join(base_out_dir, "ColdClientLoader.ini")
     print(f"generating ColdClientLoader.ini in: {cold_client_ini_path}")
 
-    formatted_ini = __cold_client_ini.format(
-        cold_app_exe = app_exe,
-        cold_appid = appid
-    )
-    
-    with open(cold_client_ini_path, "wt", encoding='utf-8') as f:
+    formatted_ini = __cold_client_ini.format(cold_app_exe=app_exe, cold_appid=appid)
+
+    with open(cold_client_ini_path, "wt", encoding="utf-8") as f:
         f.writelines(formatted_ini)

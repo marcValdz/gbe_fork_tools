@@ -8,9 +8,7 @@ from steam.enums.common import EResult
 
 
 def get_inventory_info(client, game_id):
-    return client.send_um_and_wait('Inventory.GetItemDefMeta#1', {
-        'appid': game_id
-    })
+    return client.send_um_and_wait("Inventory.GetItemDefMeta#1", {"appid": game_id})
 
 
 def generate_inventory(client, game_id):
