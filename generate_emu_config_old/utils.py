@@ -55,7 +55,8 @@ ALLOWED_CHARS = set(
         "]",
         "}",
         ";",
-        "'",
+        "\u0027",  # regular apostrophe
+        "\u2019",  # curly quote
         ",",
         ".",
         " ",

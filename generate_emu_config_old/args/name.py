@@ -1,4 +1,3 @@
-import re
 import os
 import shutil
 from typing import Dict, Tuple
