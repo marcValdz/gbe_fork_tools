@@ -41,8 +41,8 @@ def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> L
 
         # Icons
         icon_hash = ach.get("icon")
-        icongray_hash = ach.get("icongray") or ach.get("icon_gray")
         out_ach["icon"] = f'{ACH_ICON_URL}/{icon_hash}' if icon_hash else ""
+        icongray_hash = ach.get("icongray") or ach.get("icon_gray")
         out_ach["icongray"] = f'{ACH_ICON_URL}/{icongray_hash}' if icongray_hash else ""
 
         # Copy remaining fields
@@ -55,6 +55,22 @@ def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> L
     return out_achs_list
 
 
+def __build_fastly_url(base: str, appid: int, raw: str | None, filename: str) -> str | None:
+    if raw is None:
+        return None
+    if '/' in raw:
+        hash_prefix = raw.split('/')[0]
+        return f"{base}/{appid}/{hash_prefix}/{filename}"
+    return f"{base}/{appid}/{filename}"
+
+
+def __build_portrait_url(base: str, appid: int, raw: str | None) -> str | None:
+    if raw is None:
+        return None
+    filename = raw.split('/')[1] if '/' in raw else raw
+    return __build_fastly_url(base, appid, raw, filename)
+
+
 def generate_all_ach_watcher_schemas(
     base_out_dir: str,
     appid: int,
@@ -64,31 +80,26 @@ def generate_all_ach_watcher_schemas(
     app_details: Dict,          # Steam Store API
     game_info_common: Dict,     # Steam Client API
 ) -> None:
+    FASTLY_BASE     = "https://shared.fastly.steamstatic.com/store_item_assets/steam/apps"
+    COMMUNITY_FASTLY = "https://shared.fastly.steamstatic.com/community_assets/images/apps"
+
     ach_watcher_out_dir = os.path.join(base_out_dir, "Achievement Watcher", "steam_cache", "schema")
     os.makedirs(ach_watcher_out_dir, exist_ok=True)
 
     print(f"Generating schemas for Achievement Watcher in: {ach_watcher_out_dir}")
 
-    icon_hash = game_info_common.get("icon", "")
-    icon_url = (
-        f"https://shared.fastly.steamstatic.com/community_assets/images/apps/{appid}/{icon_hash}.jpg"
-        if icon_hash
-        else ""
+    icon_hash = game_info_common.get("icon")
+    icon_url = f"{COMMUNITY_FASTLY}/{appid}/{icon_hash}.jpg" if icon_hash else None
+
+    app_data = app_details.get(f'{appid}', {}).get('data', {})
+    header_image = app_data.get("header_image") or None
+    background   = app_data.get("background") or None
+
+    library_assets = (
+        game_info_common.get("library_assets_full")
+        or game_info_common.get("library_assets")
+        or {}
     )
-    
-    base_schema = {
-        "name": app_name,
-        "appid": appid,
-        "binary": app_exe,
-        "img": {
-            "header": app_details.get(f'{appid}', {}).get('data', {}).get('header_image', ""),
-            "background": app_details.get(f'{appid}', {}).get('data', {}).get('background', ""),
-            "portrait": "",
-            "hero": "",
-            "icon": icon_url,
-        },
-        "achievement": {"total": len(achs)},
-    }
 
     # Detect languages
     langs: Set[str] = set()
@@ -102,41 +113,40 @@ def generate_all_ach_watcher_schemas(
     if not langs:
         langs = {"english"}
 
-    STORE_ASSET_URL = (f"https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/{appid}/")
-
     # Per-language output
     for lang in langs:
         out_dir = os.path.join(ach_watcher_out_dir, lang)
         os.makedirs(out_dir, exist_ok=True)
 
-        schema = base_schema.copy()
-        schema["img"] = schema["img"].copy()
-
         # Portrait
-        capsule_img = (
-            game_info_common
-            .get("library_assets_full", {})
-            .get("library_capsule", {})
-            .get("image", {})
-        )
-        capsule_path = capsule_img.get(lang) or capsule_img.get("english")
-        if capsule_path:
-            schema["img"]["portrait"] = STORE_ASSET_URL + capsule_path
+        capsule_img = library_assets.get("library_capsule", {}).get("image", {})
+        portrait_raw = capsule_img.get(lang) or capsule_img.get("english")
+        portrait_url = __build_portrait_url(FASTLY_BASE, appid, portrait_raw)
 
         # Hero
-        hero_img = (
-            game_info_common
-            .get("library_assets_full", {})
-            .get("library_hero", {})
-            .get("image", {})
-        )
-        hero_path = hero_img.get(lang) or hero_img.get("english")
-        if hero_path:
-            schema["img"]["hero"] = STORE_ASSET_URL + hero_path
+        hero_img = library_assets.get("library_hero", {}).get("image", {})
+        hero_raw = hero_img.get(lang) or hero_img.get("english")
+        hero_url = __build_fastly_url(FASTLY_BASE, appid, hero_raw, "library_hero.jpg")
 
-        schema["achievement"]["list"] = __generate_ach_watcher_schema(
-            lang, appid, achs
-        )
+        ach_list = __generate_ach_watcher_schema(lang, appid, achs)
+
+        schema = {
+            "appid": appid,
+            "name": app_name,
+            "binary": app_exe,
+            "achievement": {
+                "total": len(ach_list),
+                "list": ach_list,
+            },
+            "img": {
+                "header":   header_image,
+                "background": background,
+                "portrait": portrait_url,
+                "hero":     hero_url,
+                "icon":     icon_url,
+            },
+            "apiVersion": 2,
+        }
 
         with open(
             os.path.join(out_dir, f"{appid}.db"),
