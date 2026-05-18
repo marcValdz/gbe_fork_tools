@@ -153,11 +153,11 @@ def generate_stats_achievements(schema, config_directory) -> tuple[list[dict], l
 
     if output_ach:
         with open(os.path.join(config_directory, "achievements.json"), "wt", encoding="utf-8") as f:
-            json.dump(output_ach, f, indent=2)
+            json.dump(output_ach, f, ensure_ascii=False, indent=2)
 
     if output_stats:
         with open(os.path.join(config_directory, "stats.json"), "wt", encoding="utf-8") as f:
-            json.dump(output_stats, f, indent=2)
+            json.dump(output_stats, f, ensure_ascii=False, indent=2)
 
     return (achievements_out, stats_out, copy_default_unlocked_img, copy_default_locked_img)
 

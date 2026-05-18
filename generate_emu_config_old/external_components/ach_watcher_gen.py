@@ -44,11 +44,6 @@ def __generate_ach_watcher_schema(lang: str, app_id: int, achs: List[Dict]) -> L
         icongray_hash = ach.get("icongray") or ach.get("icon_gray")
         out_ach["icongray"] = f"{ACH_ICON_URL}/{icongray_hash}" if icongray_hash else ""
 
-        # Copy remaining fields
-        for k, v in ach.items():
-            if k not in {"name", "displayName", "description", "hidden", "icon", "icongray"}:
-                out_ach[k] = v
-
         out_achs_list.append(out_ach)
 
     return out_achs_list
@@ -143,11 +138,7 @@ def generate_all_ach_watcher_schemas(
             "apiVersion": 2,
         }
 
-        with open(
-            os.path.join(out_dir, f"{appid}.db"),
-            "w",
-            encoding="utf-8",
-        ) as f:
+        with open(os.path.join(out_dir, f"{appid}.db"), "w", encoding="utf-8") as f:
             json.dump(schema, f, ensure_ascii=False, indent=2)
 
     # Create gameIndex.json for playtime tracking
