@@ -33,8 +33,15 @@ def download_achievement_images(game_id: int, image_names: set, output_folder: s
                 q.task_done()
                 return
             succeeded = False
+            
             # Updated CDN endpoints
-            for base_url in ["https://steamcdn-a.akamaihd.net/steamcommunity/public/images/apps/", "https://cdn.akamai.steamstatic.com/steamcommunity/public/images/apps/"]:
+            urls = []
+            cdns = [".fastly", ".cloudflare", ".akamai", ""]
+            for cdn in cdns:
+                urls.append(f"https://shared{cdn}.steamstatic.com/community_assets/images/apps/")
+                urls.append(f"https://cdn{cdn}.steamstatic.com/steamcommunity/public/images/apps/")
+
+            for base_url in urls:
                 # If the image name is already a full URL, just use it directly
                 url = name if name.startswith("http") else f"{base_url}{game_id}/{name}"
                 try:
